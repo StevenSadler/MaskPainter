@@ -1,0 +1,11 @@
+.idea/
+__pycache__/
+build/
+dist/
+projects/
+venv/
+
+*.bat
+Build_TkPaintApp.py
+Main_TkPaintApp.spec
+MaskPainter_config.json

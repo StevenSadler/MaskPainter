@@ -1,3 +1,7 @@
+<p align="center">
+  <img width="851" height="426" src="https://github.com/StevenSadler/MaskPainter/blob/master/readme_app_image.jpg">
+</p>
+
 # Mask Painter
 
 ## Libraries

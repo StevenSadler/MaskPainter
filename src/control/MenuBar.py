@@ -11,41 +11,48 @@ class MenuBar:
         self.model = model
         self.model.subject.project.attach(self._update_project)
 
+        # toggle lists to control normal/disabled state of menu buttons and keyboard shortcuts
+        self._disable_loaded = []
+        self._disable_unloaded = []
+
         top_menu = Menu(self.master)
         self.master.config(menu=top_menu)
 
         file_menu = Menu(top_menu)
-        # edit_menu = Menu(top_menu)
-        # debug_menu = Menu(top_menu)
-
         top_menu.add_cascade(label="File", menu=file_menu)
-        # top_menu.add_cascade(label="Edit", menu=edit_menu)
-        # top_menu.add_cascade(label="Debug", menu=debug_menu)
-
-        self._disable_loaded = []
-        self._disable_unloaded = []
         self._init_file_menu(file_menu)
+
+        # edit_menu = Menu(top_menu)
+        # top_menu.add_cascade(label="Edit", menu=edit_menu)
         # self._init_edit_menu(edit_menu)
+        #
+        # debug_menu = Menu(top_menu)
+        # top_menu.add_cascade(label="Debug", menu=debug_menu)
         # self._init_debug_menu(debug_menu)
 
     def _init_file_menu(self, menu):
-        menu.add_command(label="New", command=self.model.prompt_create_project)
-        menu.add_command(label="Open", command=self.model.prompt_load_project)
-        menu.add_command(label="Save", command=self.model.save, state=DISABLED)
-        menu.add_command(label="Save as", command=self.model.prompt_save_as, state=DISABLED)
+        menu.add_command(label="New", command=self._kb_create_project, accelerator="Ctrl+N")
+        menu.add_command(label="Open", command=self._kb_load_project, accelerator="Ctrl+O")
+        menu.add_command(label="Save", command=self._kb_save, accelerator="Ctrl+S")
+        menu.add_command(label="Save as", command=self._kb_save_as, accelerator="Ctrl+Shift+S")
         menu.add_separator()
-        menu.add_command(label="Close Project", command=self.model.unload_project, state=DISABLED)
-        menu.add_command(label="Export Image", command=self.model.subject.export.notify, state=DISABLED)
+        menu.add_command(label="Close Project", command=self.model.unload_project)
+        menu.add_command(label="Export Image", command=self.model.subject.export.notify)
         menu.add_separator()
         menu.add_command(label="Exit", command=self.master.quit)
 
-        self._disable_unloaded.append((menu, menu.index("Save")))
-        self._disable_unloaded.append((menu, menu.index("Save as")))
-        self._disable_unloaded.append((menu, menu.index("Close Project")))
-        self._disable_unloaded.append((menu, menu.index("Export Image")))
+        # add state toggles for buttons/keyboard controls depending on PROJECT update
+        self._add_toggle(self._disable_unloaded, menu, menu.index("Save"), '<Control-s>', self._kb_save)
+        self._add_toggle(self._disable_unloaded, menu, menu.index("Save as"), '<Control-S>', self._kb_save_as)
+        self._add_toggle(self._disable_unloaded, menu, menu.index("Close Project"))
+        self._add_toggle(self._disable_unloaded, menu, menu.index("Export Image"))
 
         # for testing that inverse works
-        # self.disable_loaded.append((menu, menu.index("Open")))
+        # self._add_toggle(self._disable_loaded, menu, menu.index("Open"), '<Control-o>', self._kb_open)
+
+        # bind the keyboard shortcuts that will always be on
+        self.master.bind('<Control-o>', self._kb_load_project)
+        self.master.bind('<Control-n>', self._kb_create_project)
 
     @staticmethod
     def _init_edit_menu(menu):
@@ -54,14 +61,36 @@ class MenuBar:
     def _init_debug_menu(self, menu):
         menu.add_command(label="Break App", command=self.app.breakpoint_app)
 
-    def _update_project(self):
-        def set_item_state(items, state):
-            for menu, index in items:
-                menu.entryconfigure(index, state=state)
+    @staticmethod
+    def _add_toggle(toggle_list, menu, index, key=None, on_key_press=None):
+        toggle_list.append((menu, index, key, on_key_press))
 
+    def _set_item_state(self, toggle_list, state):
+        for menu, index, key, on_key_press in toggle_list:
+            menu.entryconfigure(index, state=state)
+            if key and on_key_press:
+                if state == NORMAL:
+                    self.master.bind(key, on_key_press)
+                else:
+                    self.master.unbind(key)
+
+    def _update_project(self):
         if self.model.isProjectLoaded:
-            set_item_state(self._disable_unloaded, NORMAL)
-            set_item_state(self._disable_loaded, DISABLED)
+            self._set_item_state(self._disable_unloaded, NORMAL)
+            self._set_item_state(self._disable_loaded, DISABLED)
         else:
-            set_item_state(self._disable_unloaded, DISABLED)
-            set_item_state(self._disable_loaded, NORMAL)
+            self._set_item_state(self._disable_unloaded, DISABLED)
+            self._set_item_state(self._disable_loaded, NORMAL)
+
+    # keyboard shortcut and button handlers
+    def _kb_create_project(self, _=None):
+        self.model.prompt_create_project()
+
+    def _kb_load_project(self, _=None):
+        self.model.prompt_load_project()
+
+    def _kb_save(self, _=None):
+        self.model.save()
+
+    def _kb_save_as(self, _=None):
+        self.model.prompt_save_as()

@@ -19,13 +19,10 @@ class ProjectModel:
 
         self.layerColors = []
         self.layerNames = []
+        self.cvMasks = []
 
-        self.compFileName = None
         self.imgSize = None
         self.numMasks = None
-
-        self.maskFileNames = []
-        self.cvMasks = []
 
     def unload(self):
         self.__init__()
@@ -57,25 +54,16 @@ class ProjectModel:
         f = open(file_path)
         obj = json.load(f, object_hook=lambda d: SimpleNamespace(**d))
         f.close()
-
-        # with open(file_path) as f:
-        #     obj = json.load(f)
         return obj
 
     def export_comp_image(self, pil_image):
         if not os.path.exists(self.compRootDir):
             os.mkdir(self.compRootDir)
-        outfile = os.path.join(self.compRootDir, self.compFileName)
+        outfile = os.path.join(self.compRootDir, self._generate_comp_file_name(self.projectName))
         pil_image.save(outfile)
 
     def save_as(self, project_file_path):
         self._set_paths(project_file_path)
-
-        # set the comp and mask file names
-        self.compFileName = self._generate_comp_file_name(self.projectName)
-        for i in range(self.numMasks):
-            self.maskFileNames[i] = self._generate_mask_file_name(self.projectName, i+1)
-
         self._save_project_json()
         self._save_masks()
 
@@ -113,7 +101,6 @@ class ProjectModel:
             self._write_default_config(config_file_path)
 
         obj = self._read_json_file(config_file_path)
-        # config = obj["default_project_settings"]
         config = obj.default_project_settings
 
         # derive data from config
@@ -121,16 +108,14 @@ class ProjectModel:
         self.layerNames = config.layer_names
 
         # fill in the missing data
-        self.compFileName = "{}_comp.png".format(image_prefix)
         self.numMasks = len(self.layerNames) - 1
         self.maskFileNames = []
         self.cvMasks = []
         h = config.mask_height
         w = config.mask_width
         for i in range(self.numMasks):
-            self.maskFileNames.append("{}_mask{}.jpg".format(image_prefix, i + 1))
             self.cvMasks.append(np.zeros((h, w, 3), dtype=np.uint8))
-        self.imgSize = (h, w)
+        self.imgSize = (w, h)
 
     def _read_project_json(self, project_file_path):
         obj = self._read_json_file(project_file_path)
@@ -138,12 +123,11 @@ class ProjectModel:
         # derive data from project file
         self.layerColors = obj.layer_colors
         self.layerNames = obj.layer_names
-        self.compFileName = obj.comp_file_name
         self.numMasks = len(obj.layer_names) - 1
-        self.maskFileNames = obj.layer_masks
         self.cvMasks = []
         for i in range(self.numMasks):
-            mask_path = os.path.join(self.maskRootDir, self.maskFileNames[i])
+            mask_filename = self._generate_mask_file_name(self.projectName, i + 1)
+            mask_path = os.path.join(self.maskRootDir, mask_filename)
             cv_mask_bgr = cv.imread(mask_path)
             cv_mask = cv.cvtColor(cv_mask_bgr, cv.COLOR_BGR2GRAY)
             self.cvMasks.append(cv_mask)
@@ -156,10 +140,8 @@ class ProjectModel:
         # save json to file
         dictionary = {
             "project_name": self.projectName,
-            "comp_file_name": self.compFileName,
             "layer_colors": self.layerColors,
             "layer_names": self.layerNames,
-            "layer_masks": self.maskFileNames
         }
         with open(self.projectPath, 'w') as outfile:
             json.dump(dictionary, outfile, indent=4)
@@ -169,6 +151,5 @@ class ProjectModel:
         if not os.path.exists(self.maskRootDir):
             os.mkdir(self.maskRootDir)
         for i in range(self.numMasks):
-            cv.imwrite(os.path.join(self.maskRootDir, self.maskFileNames[i]), self.cvMasks[i])
-
-
+            mask_filename = self._generate_mask_file_name(self.projectName, i+1)
+            cv.imwrite(os.path.join(self.maskRootDir, mask_filename), self.cvMasks[i])

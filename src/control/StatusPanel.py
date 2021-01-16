@@ -20,8 +20,7 @@ class StatusPanel:
 
     def _update_save(self):
         if self.model.isProjectLoaded and self.model.isCurrentSaved:
-            self.status.config(text="Update: SAVE: project={} masks={}".format(self.model.project.projectName,
-                                                                               self.model.project.maskFileNames))
+            self.status.config(text="Update: SAVE: {}".format(self.model.project.projectName))
 
     def _update_export(self):
-        self.status.config(text="Update: EXPORT: {}".format(self.model.project.compFileName))
+        self.status.config(text="Update: EXPORT: {}".format(self.model.project.projectName))

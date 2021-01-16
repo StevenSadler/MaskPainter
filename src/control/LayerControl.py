@@ -9,22 +9,22 @@ class LayerControl:
         super().__init__()
         self.master = master
         self.model = model
-        self.model.subject.project.attach(self.update_project)
+        self.model.subject.project.attach(self._update_project)
 
         self._reset()
 
     def _reset(self):
         self._next_row = 0
 
-    def update_project(self):
+    def _update_project(self):
         for widget in self.master.winfo_children():
             widget.grid_forget()
             widget.destroy()
         if self.model.isProjectLoaded:
             self._reset()
-            self.add_layer_controls()
+            self._add_layer_controls()
 
-    def add_layer_controls(self):
+    def _add_layer_controls(self):
         def grid_row(*args):
             for c in range(len(args)):
                 args[c].grid(row=self._next_row, column=c)
@@ -33,20 +33,20 @@ class LayerControl:
         label = Label(self.master, text='Edit layers')
 
         bg_label_button = Button(self.master, width='10', text=self.model.project.layerNames[0],
-                                 command=lambda layer=0: self.prompt_layer_name(layer))
+                                 command=lambda layer=0: self._prompt_layer_name(layer))
         bg_color_button = Button(self.master, width='8', bg=self.model.project.layerColors[0],
-                                 command=lambda layer=0: self.prompt_layer_color_chooser(layer))
+                                 command=lambda layer=0: self._prompt_layer_color_chooser(layer))
         bg_hex_button = Button(self.master, width='8', text=self.model.project.layerColors[0],
-                               command=lambda layer=0: self.prompt_layer_hex_color(layer))
+                               command=lambda layer=0: self._prompt_layer_hex_color(layer))
 
         layer_rows = []
         for mask in range(self.model.project.numMasks):
             layer_button = Button(self.master, width='10', text=self.model.project.layerNames[mask + 1],
-                                  command=lambda layer=mask+1: self.prompt_layer_name(layer))
+                                  command=lambda layer=mask+1: self._prompt_layer_name(layer))
             color_button = Button(self.master, width='8', bg=self.model.project.layerColors[mask + 1],
-                                  command=lambda layer=mask+1: self.prompt_layer_color_chooser(layer))
+                                  command=lambda layer=mask+1: self._prompt_layer_color_chooser(layer))
             hex_button = Button(self.master, width='8', text=self.model.project.layerColors[mask + 1],
-                                command=lambda layer=mask+1: self.prompt_layer_hex_color(layer))
+                                command=lambda layer=mask+1: self._prompt_layer_hex_color(layer))
             layer_rows.append((layer_button, color_button, hex_button))
 
         # add the layers in the same order as PhotoShop
@@ -64,17 +64,17 @@ class LayerControl:
     #
     ################################
 
-    def prompt_layer_name(self, layer):
+    def _prompt_layer_name(self, layer):
         answer = simpledialog.askstring("Change layer name", "Enter new name of layer")
         if answer:
             self.model.set_layer_name(layer, answer)
 
-    def prompt_layer_color_chooser(self, layer):
+    def _prompt_layer_color_chooser(self, layer):
         _, answer = colorchooser.askcolor(title="Choose a new layer color")
         if answer:
             self.model.set_layer_color(layer, answer)
 
-    def prompt_layer_hex_color(self, layer):
+    def _prompt_layer_hex_color(self, layer):
         answer = simpledialog.askstring("Choose a new layer color",
                                         "Enter new hex color of layer.\nEnter 3 or 6 hexdigits.")
         if answer:
@@ -85,4 +85,4 @@ class LayerControl:
             else:
                 is_ok = messagebox.askyesno("Invalid entry", "{} is not a valid hex color. Try again?".format(answer))
                 if is_ok:
-                    self.prompt_layer_hex_color(layer)
+                    self._prompt_layer_hex_color(layer)

@@ -1,4 +1,5 @@
 from tkinter import filedialog, messagebox
+import copy
 
 from src.ObservableSubject import ObservableSubject
 from src.model.ProjectModel import ProjectModel
@@ -8,6 +9,7 @@ class Subject:
     def __init__(self):
         self.layer = ObservableSubject()
         self.project = ObservableSubject()
+        self.undo = ObservableSubject()
         self.save = ObservableSubject()
         self.export = ObservableSubject()  # used as a one-time event for an export request
 
@@ -20,6 +22,10 @@ class Model:
 
         # save subject
         self.isCurrentSaved = True
+
+        # undo subject
+        self.undoStack = []
+        self.redoStack = []
 
         # layer subject
         self.activeLayer = 0
@@ -75,6 +81,32 @@ class Model:
     def export_comp_image(self, pil_image):
         self.project.export_comp_image(pil_image)
 
+    def has_undo(self):
+        return self.isProjectLoaded and len(self.undoStack) > 0
+
+    def has_redo(self):
+        return self.isProjectLoaded and len(self.redoStack) > 0
+
+    def save_undo(self):
+        current = copy.deepcopy(self.project)
+        self.undoStack.insert(0, current)
+        self.redoStack.clear()
+        self.subject.undo.notify()
+
+    def undo(self):
+        if len(self.undoStack) > 0:
+            self.redoStack.insert(0, self.project)
+            self.project = self.undoStack.pop(0)
+            self.subject.undo.notify()
+            self.subject.layer.notify()
+
+    def redo(self):
+        if len(self.redoStack) > 0:
+            self.undoStack.insert(0, self.project)
+            self.project = self.redoStack.pop(0)
+            self.subject.undo.notify()
+            self.subject.layer.notify()
+
     ################################
     #
     #  menu click handlers
@@ -92,9 +124,9 @@ class Model:
                                                          filetypes=[("json files", "*.json")])
         if project_file_path:
             self.project.save_as(project_file_path)
-            self.isProjectLoaded = True
-            self.isCurrentSaved = True
-            self.subject.project.notify()
+            self._reset()
+
+            self.load_project(project_file_path)
 
     def unload_project(self):
         if not self.isCurrentSaved:
@@ -105,6 +137,7 @@ class Model:
         self._reset()
         self.subject.project.notify()
         self.subject.save.notify()
+        self.subject.undo.notify()
 
     def prompt_load_project(self):
         if not self.isCurrentSaved:
@@ -126,6 +159,7 @@ class Model:
         self.isProjectLoaded = True
         self.isCurrentSaved = True
         self.subject.project.notify()
+        self.subject.undo.notify()
 
     def prompt_create_project(self):
         if not self.isCurrentSaved:

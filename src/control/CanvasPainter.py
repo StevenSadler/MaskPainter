@@ -132,6 +132,9 @@ class CanvasPainter:
         active_mask = self.model.project.cvMasks[self.model.activeLayer]
         if self._brush_position:
             cv.line(active_mask, self._brush_position, (e.x, e.y), color, self.model.brushSize * 2)
+        else:
+            self.model.save_undo()
+
         cv.circle(active_mask, (e.x, e.y), self.model.brushSize, color, -1)
         self._build_canvas_image()
         self._render_brush_outline(e.x, e.y)

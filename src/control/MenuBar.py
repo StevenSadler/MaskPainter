@@ -10,10 +10,13 @@ class MenuBar:
         self.master = master
         self.model = model
         self.model.subject.project.attach(self._update_project)
+        self.model.subject.undo.attach(self._update_undo)
 
         # toggle lists to control normal/disabled state of menu buttons and keyboard shortcuts
         self._disable_loaded = []
         self._disable_unloaded = []
+        self._disable_no_undo = []
+        self._disable_no_redo = []
 
         top_menu = Menu(self.master)
         self.master.config(menu=top_menu)
@@ -22,10 +25,10 @@ class MenuBar:
         top_menu.add_cascade(label="File", menu=file_menu)
         self._init_file_menu(file_menu)
 
-        # edit_menu = Menu(top_menu)
-        # top_menu.add_cascade(label="Edit", menu=edit_menu)
-        # self._init_edit_menu(edit_menu)
-        #
+        edit_menu = Menu(top_menu)
+        top_menu.add_cascade(label="Edit", menu=edit_menu)
+        self._init_edit_menu(edit_menu)
+
         # debug_menu = Menu(top_menu)
         # top_menu.add_cascade(label="Debug", menu=debug_menu)
         # self._init_debug_menu(debug_menu)
@@ -54,9 +57,12 @@ class MenuBar:
         self.master.bind('<Control-o>', self._kb_load_project)
         self.master.bind('<Control-n>', self._kb_create_project)
 
-    @staticmethod
-    def _init_edit_menu(menu):
-        menu.add_command(label="Redo", command=Utils.do_nothing)
+    def _init_edit_menu(self, menu):
+        menu.add_command(label="Undo", command=self._kb_undo, accelerator="Ctrl+Z", state=DISABLED)
+        menu.add_command(label="Redo", command=self._kb_redo, accelerator="Ctrl+Y", state=DISABLED)
+
+        self._add_toggle(self._disable_no_undo, menu, menu.index("Undo"), '<Control-z>', self._kb_undo)
+        self._add_toggle(self._disable_no_redo, menu, menu.index("Redo"), '<Control-y>', self._kb_redo)
 
     def _init_debug_menu(self, menu):
         menu.add_command(label="Break App", command=self.app.breakpoint_app)
@@ -82,6 +88,17 @@ class MenuBar:
             self._set_item_state(self._disable_unloaded, DISABLED)
             self._set_item_state(self._disable_loaded, NORMAL)
 
+    def _update_undo(self):
+        if self.model.has_undo():
+            self._set_item_state(self._disable_no_undo, NORMAL)
+        else:
+            self._set_item_state(self._disable_no_undo, DISABLED)
+
+        if self.model.has_redo():
+            self._set_item_state(self._disable_no_redo, NORMAL)
+        else:
+            self._set_item_state(self._disable_no_redo, DISABLED)
+
     # keyboard shortcut and button handlers
     def _kb_create_project(self, _=None):
         self.model.prompt_create_project()
@@ -94,3 +111,9 @@ class MenuBar:
 
     def _kb_save_as(self, _=None):
         self.model.prompt_save_as()
+
+    def _kb_undo(self, _=None):
+        self.model.undo()
+
+    def _kb_redo(self, _=None):
+        self.model.redo()

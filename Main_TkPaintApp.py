@@ -26,7 +26,7 @@ class TkPaintApp(Frame):
         model = Model()
         model.subject.save.attach(self._update_save)
         model.subject.project.attach(self._update_project)
-        self.uiModel = model
+        self.model = model
 
         # set the widgets
         status_label = Label(self.master, text="status label...", bd=1, relief=SUNKEN, anchor=W)
@@ -65,18 +65,18 @@ class TkPaintApp(Frame):
         model.subject.project.notify()
 
     def _update_save(self):
-        if not self.uiModel.isProjectLoaded:
+        if not self.model.isProjectLoaded:
             self.master.title(self._appTitle)
-        elif self.uiModel.isCurrentSaved:
-            self.master.title("{} - {}".format(self._appTitle, self.uiModel.project.projectFileName))
+        elif self.model.isCurrentSaved:
+            self.master.title("{} - {}".format(self._appTitle, self.model.project.projectFileName))
         else:
-            self.master.title("{} - {} *".format(self._appTitle, self.uiModel.project.projectFileName))
+            self.master.title("{} - {} *".format(self._appTitle, self.model.project.projectFileName))
 
     def _update_project(self):
-        if not self.uiModel.isProjectLoaded:
+        if not self.model.isProjectLoaded:
             self.master.title(self._appTitle)
         else:
-            self.master.title("{} - {}".format(self._appTitle, self.uiModel.project.projectFileName))
+            self.master.title("{} - {}".format(self._appTitle, self.model.project.projectFileName))
 
     # menu bar click handlers
     def breakpoint_app(self):

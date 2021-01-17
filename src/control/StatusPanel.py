@@ -8,8 +8,8 @@ class StatusPanel:
         self.model.subject.export.attach(self._update_export)
 
     def _update_layer(self):
-        active_layer = self.model.activeLayer
-        vis = self.model.layerVisibility
+        active_layer = self.model.layer.activeMask
+        vis = self.model.layer.visibility
         self.status.config(text="Update: LAYER: active={} vis={}".format(active_layer, vis))
 
     def _update_project(self):

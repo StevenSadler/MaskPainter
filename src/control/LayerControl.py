@@ -38,6 +38,8 @@ class LayerControl:
                                  command=lambda layer=0: self._prompt_layer_color_chooser(layer))
         bg_hex_button = Button(self.master, width='8', text=self.model.project.layerColors[0],
                                command=lambda layer=0: self._prompt_layer_hex_color(layer))
+        bg_add_button = Button(self.master, width='4', text='+^',
+                               command=lambda layer=0: self.model.add_layer(layer + 1))
 
         layer_rows = []
         for mask in range(self.model.project.numMasks):
@@ -47,7 +49,10 @@ class LayerControl:
                                   command=lambda layer=mask+1: self._prompt_layer_color_chooser(layer))
             hex_button = Button(self.master, width='8', text=self.model.project.layerColors[mask + 1],
                                 command=lambda layer=mask+1: self._prompt_layer_hex_color(layer))
-            layer_rows.append((layer_button, color_button, hex_button))
+            add_button = Button(self.master, width='4', text='+^',
+                                command=lambda layer=mask+1: self.model.add_layer(layer + 1))
+
+            layer_rows.append((layer_button, color_button, hex_button, add_button))
 
         # add the layers in the same order as PhotoShop
         # so those at the top will be in the foreground
@@ -55,8 +60,8 @@ class LayerControl:
         # add_label_row(label)
         grid_row(label)
         for i in range(self.model.project.numMasks - 1, -1, -1):
-            grid_row(layer_rows[i][0], layer_rows[i][1], layer_rows[i][2])
-        grid_row(bg_label_button, bg_color_button, bg_hex_button)
+            grid_row(layer_rows[i][0], layer_rows[i][1], layer_rows[i][2], layer_rows[i][3])
+        grid_row(bg_label_button, bg_color_button, bg_hex_button, bg_add_button)
 
     ################################
     #

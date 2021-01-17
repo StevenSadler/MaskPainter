@@ -4,6 +4,8 @@ import os
 import cv2 as cv
 import numpy as np
 
+from src.Utils import Utils
+
 
 class ProjectModel:
     def __init__(self):
@@ -109,7 +111,6 @@ class ProjectModel:
 
         # fill in the missing data
         self.numMasks = len(self.layerNames) - 1
-        self.maskFileNames = []
         self.cvMasks = []
         h = config.mask_height
         w = config.mask_width
@@ -153,3 +154,14 @@ class ProjectModel:
         for i in range(self.numMasks):
             mask_filename = self._generate_mask_file_name(self.projectName, i+1)
             cv.imwrite(os.path.join(self.maskRootDir, mask_filename), self.cvMasks[i])
+
+    def insert_layer(self, layer):
+        # insert in layer colors, layer names, cv masks
+        color = Utils.average_hex_colors(self.layerColors[layer-1], self.layerColors[layer])
+        self.layerColors.insert(layer, color)
+        self.layerNames.insert(layer, "New layer")
+        w, h = self.imgSize
+        cv_mask_bgr = np.zeros((h, w, 3), dtype=np.uint8)
+        cv_mask = cv.cvtColor(cv_mask_bgr, cv.COLOR_BGR2GRAY)
+        self.cvMasks.insert(layer-1, cv_mask)
+        self.numMasks = len(self.cvMasks)

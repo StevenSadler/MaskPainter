@@ -20,7 +20,7 @@ class TkPaintApp(Frame):
         # vars used for widget sizes and root geometry
         canvas_width = 640    # 256
         canvas_height = 360   # 256
-        control_panel_width = 200
+        control_panel_width = 230
 
         # model must be initialized before widgets and controllers
         model = Model()

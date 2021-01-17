@@ -3,6 +3,7 @@ import copy
 
 from src.ObservableSubject import ObservableSubject
 from src.model.ProjectModel import ProjectModel
+from src.model.LayerModel import LayerModel
 
 
 class Subject:
@@ -19,6 +20,7 @@ class Model:
         if not is_reset:
             self.subject = Subject()
             self.project = ProjectModel()
+            self.layer = LayerModel()
 
         # save subject
         self.isCurrentSaved = True
@@ -26,10 +28,6 @@ class Model:
         # undo subject
         self.undoStack = []
         self.redoStack = []
-
-        # layer subject
-        self.activeLayer = 0
-        self.layerVisibility = []
 
         # project subject
         self.isProjectLoaded = False
@@ -43,6 +41,12 @@ class Model:
     def _reset(self):
         self.__init__(True)
 
+    def has_undo(self):
+        return self.isProjectLoaded and len(self.undoStack) > 0
+
+    def has_redo(self):
+        return self.isProjectLoaded and len(self.redoStack) > 0
+
     # tk scale slider events are strings that contain floats
     # convert to int before storing
     def set_brush_size(self, event):
@@ -50,28 +54,31 @@ class Model:
 
     # change layer data and notify observers
     def set_active_layer(self, layer):
-        self.activeLayer = layer
-        self.layerVisibility[layer] = True
+        self.layer.set_active_layer(layer)
         self.subject.layer.notify()
 
     def set_layer_visibility(self, layer, vis):
-        self.layerVisibility[layer] = vis
+        self.layer.set_layer_visibility(layer, vis)
         self.subject.layer.notify()
 
     def toggle_layer_visibility(self, layer):
-        self.layerVisibility[layer] = not self.layerVisibility[layer]
+        self.layer.toggle_layer_visibility(layer)
         self.subject.layer.notify()
 
     def set_layer_name(self, layer, name):
+        self.save_undo()
         self.project.layerNames[layer] = name
         self.isCurrentSaved = False
         self.subject.project.notify()
+        self.subject.layer.notify()
         self.subject.save.notify()
 
     def set_layer_color(self, layer, color):
+        self.save_undo()
         self.project.layerColors[layer] = color
         self.isCurrentSaved = False
         self.subject.project.notify()
+        self.subject.layer.notify()
         self.subject.save.notify()
 
     def set_mask_edited(self):
@@ -81,37 +88,49 @@ class Model:
     def export_comp_image(self, pil_image):
         self.project.export_comp_image(pil_image)
 
-    def has_undo(self):
-        return self.isProjectLoaded and len(self.undoStack) > 0
+    def add_layer(self, layer):
+        self.save_undo()
+        self.project.insert_layer(layer)
+        self.layer.insert_layer(layer - 1)
 
-    def has_redo(self):
-        return self.isProjectLoaded and len(self.redoStack) > 0
-
-    def save_undo(self):
-        current = copy.deepcopy(self.project)
-        self.undoStack.insert(0, current)
-        self.redoStack.clear()
+        self.isCurrentSaved = False
+        self.subject.project.notify()
+        self.subject.layer.notify()
+        self.subject.save.notify()
         self.subject.undo.notify()
 
-    def undo(self):
-        if len(self.undoStack) > 0:
-            self.redoStack.insert(0, self.project)
-            self.project = self.undoStack.pop(0)
-            self.subject.undo.notify()
-            self.subject.layer.notify()
-
-    def redo(self):
-        if len(self.redoStack) > 0:
-            self.undoStack.insert(0, self.project)
-            self.project = self.redoStack.pop(0)
-            self.subject.undo.notify()
-            self.subject.layer.notify()
+    def save_undo(self):
+        project = copy.deepcopy(self.project)
+        layer = copy.deepcopy(self.layer)
+        self.undoStack.insert(0, (project, layer))
+        self.redoStack.clear()
+        self.subject.undo.notify()
 
     ################################
     #
     #  menu click handlers
     #
     ################################
+
+    def undo(self):
+        if len(self.undoStack) > 0:
+            self.redoStack.insert(0, (self.project, self.layer))
+            self.project, self.layer = self.undoStack.pop(0)
+            self.isCurrentSaved = False
+            self.subject.project.notify()
+            self.subject.layer.notify()
+            self.subject.save.notify()
+            self.subject.undo.notify()
+
+    def redo(self):
+        if len(self.redoStack) > 0:
+            self.undoStack.insert(0, (self.project, self.layer))
+            self.project, self.layer = self.redoStack.pop(0)
+            self.isCurrentSaved = False
+            self.subject.project.notify()
+            self.subject.layer.notify()
+            self.subject.save.notify()
+            self.subject.undo.notify()
 
     def save(self):
         self.project.save()
@@ -151,10 +170,7 @@ class Model:
 
     def load_project(self, project_file_path):
         self.project.load_project(project_file_path)
-
-        self.layerVisibility = []
-        for i in range(self.project.numMasks):
-            self.layerVisibility.append(True)
+        self.layer.init_model(self.project.numMasks)
 
         self.isProjectLoaded = True
         self.isCurrentSaved = True

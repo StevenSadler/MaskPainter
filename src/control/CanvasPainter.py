@@ -64,7 +64,7 @@ class CanvasPainter:
     def _update_export(self):
         temp_bg = self._comp_bg_image(show_all=True)
         temp_fg = self._comp_fg_image(show_all=True)
-        temp_active_layer_image = self._get_masked_image(self.model.activeLayer, show_all=True)
+        temp_active_layer_image = self._get_masked_image(self.model.layer.activeMask, show_all=True)
         composite = Image.alpha_composite(temp_bg, temp_active_layer_image)
         composite = Image.alpha_composite(composite, temp_fg)
 
@@ -76,7 +76,7 @@ class CanvasPainter:
             mask = Image.fromarray(self.model.project.cvMasks[layer_num])
             mask.convert('L').resize(self.model.project.imgSize)
             image = Image.new('RGBA', self.model.project.imgSize, self.model.project.layerColors[layer_num + 1])
-            if self.model.layerVisibility[layer_num] or show_all:
+            if self.model.layer.visibility[layer_num] or show_all:
                 image.putalpha(mask)
             else:
                 image.putalpha(0)
@@ -88,20 +88,20 @@ class CanvasPainter:
 
     def _comp_bg_image(self, show_all=False):
         composite = Image.new('RGBA', self.model.project.imgSize, self.model.project.layerColors[0])
-        for i in range(self.model.activeLayer):
+        for i in range(self.model.layer.activeMask):
             front = self._get_masked_image(i, show_all)
             composite = Image.alpha_composite(composite, front)
         return composite
 
     def _comp_fg_image(self, show_all=False):
-        composite = self._get_masked_image(self.model.activeLayer + 1)
-        for i in range(self.model.activeLayer + 1, self.model.project.numMasks):
+        composite = self._get_masked_image(self.model.layer.activeMask + 1)
+        for i in range(self.model.layer.activeMask + 1, self.model.project.numMasks):
             front = self._get_masked_image(i, show_all)
             composite = Image.alpha_composite(composite, front)
         return composite
 
     def _build_canvas_image(self):
-        active_layer_image = self._get_masked_image(self.model.activeLayer)
+        active_layer_image = self._get_masked_image(self.model.layer.activeMask)
         composite = Image.alpha_composite(self._bg_image, active_layer_image)
         composite = Image.alpha_composite(composite, self._fg_image)
 
@@ -117,19 +117,19 @@ class CanvasPainter:
         self.canvas.create_oval(x - r, y - r, x + r, y + r)
 
     def _paint(self, e):
-        if self.model.layerVisibility[self.model.activeLayer]:
+        if self.model.layer.visibility[self.model.layer.activeMask]:
             self._edit_active_mask(e, (255, 255, 255))
         else:
             self._prompt_show_invisible_active_layer()
 
     def _erase(self, e):
-        if self.model.layerVisibility[self.model.activeLayer]:
+        if self.model.layer.visibility[self.model.layer.activeMask]:
             self._edit_active_mask(e, (0, 0, 0))
         else:
             self._prompt_show_invisible_active_layer()
 
     def _edit_active_mask(self, e, color):
-        active_mask = self.model.project.cvMasks[self.model.activeLayer]
+        active_mask = self.model.project.cvMasks[self.model.layer.activeMask]
         if self._brush_position:
             cv.line(active_mask, self._brush_position, (e.x, e.y), color, self.model.brushSize * 2)
         else:
@@ -153,9 +153,9 @@ class CanvasPainter:
         self._build_canvas_image()
 
     def _prompt_show_invisible_active_layer(self):
-        layer_name = self.model.project.layerNames[self.model.activeLayer]
+        layer_name = self.model.project.layerNames[self.model.layer.activeMask]
         message = "The active layer {} is hidden. Do you wish to make it visible to allow painting?".format(layer_name)
         is_ok = messagebox.askyesno(title="Confirm", message=message, icon="warning")
 
         if is_ok:
-            self.model.toggle_layer_visibility(self.model.activeLayer)
+            self.model.toggle_layer_visibility(self.model.layer.activeMask)

@@ -8,8 +8,8 @@ from src.model.LayerModel import LayerModel
 
 class Subject:
     def __init__(self):
-        self.layer = ObservableSubject()
         self.project = ObservableSubject()
+        self.layer = ObservableSubject()
         self.undo = ObservableSubject()
         self.save = ObservableSubject()
         self.export = ObservableSubject()  # used as a one-time event for an export request
@@ -98,6 +98,19 @@ class Model:
         self.subject.layer.notify()
         self.subject.save.notify()
         self.subject.undo.notify()
+
+    def remove_layer(self, layer):
+        # do not allow removing the last mask, what would happen to activeMask
+        if self.project.numMasks > 1:
+            self.save_undo()
+            self.project.remove_layer(layer)
+            self.layer.remove_layer(layer - 1)
+
+            self.isCurrentSaved = False
+            self.subject.project.notify()
+            self.subject.layer.notify()
+            self.subject.save.notify()
+            self.subject.undo.notify()
 
     def save_undo(self):
         project = copy.deepcopy(self.project)

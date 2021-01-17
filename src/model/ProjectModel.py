@@ -157,7 +157,10 @@ class ProjectModel:
 
     def insert_layer(self, layer):
         # insert in layer colors, layer names, cv masks
-        color = Utils.average_hex_colors(self.layerColors[layer-1], self.layerColors[layer])
+        if layer > self.numMasks:
+            color = self.layerColors[layer-1]
+        else:
+            color = Utils.average_hex_colors(self.layerColors[layer-1], self.layerColors[layer])
         self.layerColors.insert(layer, color)
         self.layerNames.insert(layer, "New layer")
         w, h = self.imgSize
@@ -165,3 +168,10 @@ class ProjectModel:
         cv_mask = cv.cvtColor(cv_mask_bgr, cv.COLOR_BGR2GRAY)
         self.cvMasks.insert(layer-1, cv_mask)
         self.numMasks = len(self.cvMasks)
+
+    def remove_layer(self, layer):
+        self.layerColors.pop(layer)
+        self.layerNames.pop(layer)
+        self.cvMasks.pop(layer - 1)
+        self.numMasks = len(self.cvMasks)
+

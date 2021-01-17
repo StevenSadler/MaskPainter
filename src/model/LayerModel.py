@@ -22,3 +22,8 @@ class LayerModel:
     def insert_layer(self, layer):
         self.visibility.insert(layer, True)
         self.activeMask = layer
+
+    def remove_layer(self, layer):
+        self.visibility.pop(layer)
+        if self.activeMask == layer:
+            self.activeMask = 0

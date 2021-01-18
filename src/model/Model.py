@@ -4,6 +4,7 @@ import copy
 from src.ObservableSubject import ObservableSubject
 from src.model.ProjectModel import ProjectModel
 from src.model.LayerModel import LayerModel
+from src.model.UndoHistory import UndoHistory
 
 
 class Subject:
@@ -21,13 +22,13 @@ class Model:
             self.subject = Subject()
             self.project = ProjectModel()
             self.layer = LayerModel()
+            self._history = UndoHistory(20)
 
         # save subject
         self.isCurrentSaved = True
 
         # undo subject
-        self.undoStack = []
-        self.redoStack = []
+        self._history.reset()
 
         # project subject
         self.isProjectLoaded = False
@@ -42,10 +43,10 @@ class Model:
         self.__init__(True)
 
     def has_undo(self):
-        return self.isProjectLoaded and len(self.undoStack) > 0
+        return self.isProjectLoaded and self._history.has_undo()
 
     def has_redo(self):
-        return self.isProjectLoaded and len(self.redoStack) > 0
+        return self.isProjectLoaded and self._history.has_redo()
 
     # tk scale slider events are strings that contain floats
     # convert to int before storing
@@ -66,20 +67,14 @@ class Model:
         self.subject.layer.notify()
 
     def set_layer_name(self, layer, name):
-        self.save_undo()
+        self.save_undo_state()
         self.project.layerNames[layer] = name
-        self.isCurrentSaved = False
-        self.subject.project.notify()
-        self.subject.layer.notify()
-        self.subject.save.notify()
+        self._notify_needs_save()
 
     def set_layer_color(self, layer, color):
-        self.save_undo()
+        self.save_undo_state()
         self.project.layerColors[layer] = color
-        self.isCurrentSaved = False
-        self.subject.project.notify()
-        self.subject.layer.notify()
-        self.subject.save.notify()
+        self._notify_needs_save()
 
     def set_mask_edited(self):
         self.isCurrentSaved = False
@@ -89,34 +84,30 @@ class Model:
         self.project.export_comp_image(pil_image)
 
     def add_layer(self, layer):
-        self.save_undo()
+        self.save_undo_state()
         self.project.insert_layer(layer)
         self.layer.insert_layer(layer - 1)
-
-        self.isCurrentSaved = False
-        self.subject.project.notify()
-        self.subject.layer.notify()
-        self.subject.save.notify()
-        self.subject.undo.notify()
+        self._notify_needs_save()
 
     def remove_layer(self, layer):
         # do not allow removing the last mask, what would happen to activeMask
         if self.project.numMasks > 1:
-            self.save_undo()
+            self.save_undo_state()
             self.project.remove_layer(layer)
             self.layer.remove_layer(layer - 1)
+            self._notify_needs_save()
 
-            self.isCurrentSaved = False
-            self.subject.project.notify()
-            self.subject.layer.notify()
-            self.subject.save.notify()
-            self.subject.undo.notify()
-
-    def save_undo(self):
+    def save_undo_state(self):
         project = copy.deepcopy(self.project)
         layer = copy.deepcopy(self.layer)
-        self.undoStack.insert(0, (project, layer))
-        self.redoStack.clear()
+        self._history.save_state((project, layer))
+        self.subject.undo.notify()
+
+    def _notify_needs_save(self):
+        self.isCurrentSaved = False
+        self.subject.project.notify()
+        self.subject.layer.notify()
+        self.subject.save.notify()
         self.subject.undo.notify()
 
     ################################
@@ -126,24 +117,14 @@ class Model:
     ################################
 
     def undo(self):
-        if len(self.undoStack) > 0:
-            self.redoStack.insert(0, (self.project, self.layer))
-            self.project, self.layer = self.undoStack.pop(0)
-            self.isCurrentSaved = False
-            self.subject.project.notify()
-            self.subject.layer.notify()
-            self.subject.save.notify()
-            self.subject.undo.notify()
+        if self._history.has_undo():
+            self.project, self.layer = self._history.undo((self.project, self.layer))
+            self._notify_needs_save()
 
     def redo(self):
-        if len(self.redoStack) > 0:
-            self.undoStack.insert(0, (self.project, self.layer))
-            self.project, self.layer = self.redoStack.pop(0)
-            self.isCurrentSaved = False
-            self.subject.project.notify()
-            self.subject.layer.notify()
-            self.subject.save.notify()
-            self.subject.undo.notify()
+        if self._history.has_redo():
+            self.project, self.layer = self._history.redo((self.project, self.layer))
+            self._notify_needs_save()
 
     def save(self):
         self.project.save()

@@ -3,6 +3,8 @@ from tkinter import messagebox
 from PIL import ImageTk, Image
 import cv2 as cv
 
+from src.Utils import Utils
+
 
 class CanvasPainter:
     def __init__(self, canvas, model):
@@ -15,8 +17,12 @@ class CanvasPainter:
         self._bg_image = None
         self._fg_image = None
         self._brush_position = None
+        self._pan_position = None
         self._color_paint = 'white'
         self._color_erase = 'black'
+
+        self._img_x = 0
+        self._img_y = 0
 
     def _bind(self):
         # left mouse button to paint
@@ -29,9 +35,16 @@ class CanvasPainter:
         self.canvas.bind('<B3-Motion>', self._erase)
         self.canvas.bind('<ButtonRelease-3>', self._end_brush_stroke)
 
+        # middle mouse button to pan
+        self.canvas.bind('<Button-2>', self._pan)
+        self.canvas.bind('<B2-Motion>', self._pan)
+        self.canvas.bind('<ButtonRelease-2>', self._end_pan)
+
         # any mouse motion to draw black outline circle
         self.canvas.bind('<Motion>', self._mouse_move)
         self.canvas.bind('<Leave>', self._mouse_exit)
+
+        self.canvas.bind('<Configure>', self._resize)
 
     def _unbind(self):
         # left mouse button to paint
@@ -44,20 +57,30 @@ class CanvasPainter:
         self.canvas.unbind('<B3-Motion>')
         self.canvas.unbind('<ButtonRelease-3>')
 
+        # middle mouse button to pan
+        self.canvas.unbind('<Button-2>')
+        self.canvas.unbind('<B2-Motion>')
+        self.canvas.unbind('<ButtonRelease-2>')
+
         # any mouse motion to draw black outline circle
         self.canvas.unbind('<Motion>')
         self.canvas.unbind('<Leave>')
 
+        self.canvas.unbind('<Configure>')
+
     def _update_layer(self):
         self._bg_image = self._comp_bg_image()
         self._fg_image = self._comp_fg_image()
-        self._build_canvas_image()
+        self._render_canvas_image()
 
     def _update_project(self):
         self.canvas.delete(ALL)
         if self.model.isProjectLoaded:
+            self._img_x = 0
+            self._img_y = 0
             self._bind()
             self._update_layer()
+            self._resize()
         else:
             self._unbind()
 
@@ -68,7 +91,7 @@ class CanvasPainter:
         composite = Image.alpha_composite(temp_bg, temp_active_layer_image)
         composite = Image.alpha_composite(composite, temp_fg)
 
-        # send the PIL image to the uiModel to save to disk
+        # send the PIL image to the model to save to disk
         self.model.export_comp_image(composite)
 
     def _get_masked_image(self, layer_num, show_all=False):
@@ -100,7 +123,7 @@ class CanvasPainter:
             composite = Image.alpha_composite(composite, front)
         return composite
 
-    def _build_canvas_image(self):
+    def _render_canvas_image(self):
         active_layer_image = self._get_masked_image(self.model.layer.activeMask)
         composite = Image.alpha_composite(self._bg_image, active_layer_image)
         composite = Image.alpha_composite(composite, self._fg_image)
@@ -110,7 +133,7 @@ class CanvasPainter:
         # convert the PIL image to TK PhotoImage
         # set the canvas.image property, it wont work without this step
         self.canvas.image = ImageTk.PhotoImage(composite)
-        self.canvas.create_image(0, 0, image=self.canvas.image, anchor=NW)
+        self.canvas.create_image(self._img_x, self._img_y, image=self.canvas.image, anchor=NW)
 
     def _render_brush_outline(self, x, y):
         r = self.model.brushSize
@@ -130,13 +153,18 @@ class CanvasPainter:
 
     def _edit_active_mask(self, e, color):
         active_mask = self.model.project.cvMasks[self.model.layer.activeMask]
+        x = e.x - self._img_x
+        y = e.y - self._img_y
         if self._brush_position:
-            cv.line(active_mask, self._brush_position, (e.x, e.y), color, self.model.brushSize * 2)
+            bx, by = self._brush_position
+            bx -= self._img_x
+            by -= self._img_y
+            cv.line(active_mask, (bx, by), (x, y), color, self.model.brushSize * 2)
         else:
             self.model.save_undo_state()
 
-        cv.circle(active_mask, (e.x, e.y), self.model.brushSize, color, -1)
-        self._build_canvas_image()
+        cv.circle(active_mask, (x, y), self.model.brushSize, color, -1)
+        self._render_canvas_image()
         self._render_brush_outline(e.x, e.y)
         self._brush_position = (e.x, e.y)
 
@@ -145,12 +173,34 @@ class CanvasPainter:
         if self.model.isCurrentSaved:
             self.model.set_mask_edited()
 
+    def _pan(self, e):
+        if self._pan_position:
+            old_x, old_y = self._pan_position
+            dx = e.x - old_x
+            dy = e.y - old_y
+
+            img_w, img_h = self.model.project.imgSize
+            canvas_w = self.canvas.winfo_width()
+            canvas_h = self.canvas.winfo_height()
+
+            if canvas_w < img_w:
+                self._img_x += dx
+                self._img_x = Utils.clamp(self._img_x, 0, canvas_w - img_w)
+            if canvas_h < img_h:
+                self._img_y += dy
+                self._img_y = Utils.clamp(self._img_y, 0, canvas_h - img_h)
+        self._pan_position = (e.x, e.y)
+        self._render_canvas_image()
+
+    def _end_pan(self, _):
+        self._pan_position = None
+
     def _mouse_move(self, e):
-        self._build_canvas_image()
+        self._render_canvas_image()
         self._render_brush_outline(e.x, e.y)
 
     def _mouse_exit(self, _):
-        self._build_canvas_image()
+        self._render_canvas_image()
 
     def _prompt_show_invisible_active_layer(self):
         layer_name = self.model.project.layerNames[self.model.layer.activeMask]
@@ -159,3 +209,19 @@ class CanvasPainter:
 
         if is_ok:
             self.model.toggle_layer_visibility(self.model.layer.activeMask)
+
+    def _resize(self, _=None):
+        img_w, img_h = self.model.project.imgSize
+        canvas_w = self.canvas.winfo_width()
+        canvas_h = self.canvas.winfo_height()
+
+        if canvas_w > img_w:
+            self._img_x = (canvas_w - img_w) // 2
+        else:
+            self._img_x = Utils.clamp(self._img_x, 0, canvas_w - img_w)
+        if canvas_h > img_h:
+            self._img_y = (canvas_h - img_h) // 2
+        else:
+            self._img_y = Utils.clamp(self._img_y, 0, canvas_h - img_h)
+
+        self._render_canvas_image()

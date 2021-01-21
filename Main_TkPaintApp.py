@@ -19,8 +19,8 @@ class TkPaintApp(Frame):
         self.master.title(self._appTitle)
 
         # vars used for widget sizes and root geometry
-        canvas_width = 640    # 256
-        canvas_height = 360   # 256
+        canvas_width = 200  # 640    # 256
+        canvas_height = 200  # 360   # 256
 
         # the only 2 supported systems are Windows 7 and Windows 10
         # tkinter widgets in the control panel render at different widths on Windows 7 and Windows 10
@@ -38,7 +38,8 @@ class TkPaintApp(Frame):
 
         # set the widgets
         status_label = Label(self.master, text="status label...", bd=1, relief=SUNKEN, anchor=W)
-        canvas = Canvas(self.master, width=canvas_width, height=canvas_height, bg="gray50")
+        canvas = Canvas(self.master, width=canvas_width, height=canvas_height,
+                        highlightthickness=0, bg="gray50", relief=RAISED)
 
         notebook = Notebook(self.master, width=control_panel_width)
         brush_frame = Frame(notebook)
@@ -48,8 +49,8 @@ class TkPaintApp(Frame):
 
         # pack the widgets
         status_label.pack(side=BOTTOM, fill=X)
-        canvas.pack(side=RIGHT)
         notebook.pack(side=LEFT, fill=Y)
+        canvas.pack(side=LEFT, fill=BOTH, expand=True)
 
         # delegate controllers
         self.menuBar = MenuBar(self.master, model, self)

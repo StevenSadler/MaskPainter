@@ -41,5 +41,12 @@ class Utils:
         return None
 
     @staticmethod
+    def clamp(val, a, b):
+        if a < b:
+            return max(a, min(val, b))
+        else:
+            return max(b, min(val, a))
+
+    @staticmethod
     def do_nothing():
         print("do nothing")

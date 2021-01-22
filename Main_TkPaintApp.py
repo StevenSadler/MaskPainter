@@ -4,11 +4,12 @@ from tkinter.ttk import Notebook
 import platform
 
 from src.model.Model import Model
+from src.view.CanvasPainter import CanvasPainter
 from src.control.MenuBar import MenuBar
 from src.control.StatusPanel import StatusPanel
 from src.control.BrushControl import BrushControl
 from src.control.LayerControl import LayerControl
-from src.control.CanvasPainter import CanvasPainter
+from src.control.CanvasControl import CanvasControl
 
 
 class TkPaintApp(Frame):
@@ -19,8 +20,8 @@ class TkPaintApp(Frame):
         self.master.title(self._appTitle)
 
         # vars used for widget sizes and root geometry
-        canvas_width = 200  # 640    # 256
-        canvas_height = 200  # 360   # 256
+        canvas_width = 640    # 256
+        canvas_height = 360   # 256
 
         # the only 2 supported systems are Windows 7 and Windows 10
         # tkinter widgets in the control panel render at different widths on Windows 7 and Windows 10
@@ -52,12 +53,15 @@ class TkPaintApp(Frame):
         notebook.pack(side=LEFT, fill=Y)
         canvas.pack(side=LEFT, fill=BOTH, expand=True)
 
+        # canvas painter
+        painter = CanvasPainter(canvas, model)
+
         # delegate controllers
         self.menuBar = MenuBar(self.master, model, self)
         self.statusPanel = StatusPanel(status_label, model)
         self.brushControl = BrushControl(brush_frame, model)
         self.layerControl = LayerControl(layer_frame, model)
-        self.painter = CanvasPainter(canvas, model)
+        self.canvasControl = CanvasControl(canvas, model, painter)
 
         # set the geometry of the Tk root
         status_height = 17
@@ -95,7 +99,6 @@ class TkPaintApp(Frame):
 def main():
 
     root = Tk()
-    # root.geometry("800x600+300+100")
     TkPaintApp(root)
     root.mainloop()
 

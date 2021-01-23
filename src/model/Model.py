@@ -13,7 +13,7 @@ class Subject:
         self.layer = ObservableSubject()
         self.undo = ObservableSubject()
         self.save = ObservableSubject()
-        self.export = ObservableSubject()  # used as a one-time event for an export request
+        self.export = ObservableSubject()
 
 
 class Model:
@@ -82,6 +82,7 @@ class Model:
 
     def export_comp_image(self, pil_image):
         self.project.export_comp_image(pil_image)
+        self.subject.export.notify()
 
     def add_layer(self, layer):
         self.save_undo_state()

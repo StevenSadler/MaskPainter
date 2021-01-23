@@ -57,7 +57,7 @@ class TkPaintApp(Frame):
         painter = CanvasPainter(canvas, model)
 
         # delegate controllers
-        self.menuBar = MenuBar(self.master, model, self)
+        self.menuBar = MenuBar(self.master, model, painter, self)
         self.statusPanel = StatusPanel(status_label, model)
         self.brushControl = BrushControl(brush_frame, model)
         self.layerControl = LayerControl(layer_frame, model)

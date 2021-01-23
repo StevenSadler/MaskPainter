@@ -5,7 +5,7 @@ from src.Utils import Utils
 
 
 class MenuBar:
-    def __init__(self, master, model, app):
+    def __init__(self, master, model, painter, app):
         self.app = app
         self.master = master
         self.model = model
@@ -23,7 +23,7 @@ class MenuBar:
 
         file_menu = Menu(top_menu)
         top_menu.add_cascade(label="File", menu=file_menu)
-        self._init_file_menu(file_menu)
+        self._init_file_menu(file_menu, painter)
 
         edit_menu = Menu(top_menu)
         top_menu.add_cascade(label="Edit", menu=edit_menu)
@@ -33,14 +33,14 @@ class MenuBar:
         # top_menu.add_cascade(label="Debug", menu=debug_menu)
         # self._init_debug_menu(debug_menu)
 
-    def _init_file_menu(self, menu):
+    def _init_file_menu(self, menu, painter):
         menu.add_command(label="New", command=self._kb_create_project, accelerator="Ctrl+N")
         menu.add_command(label="Open", command=self._kb_load_project, accelerator="Ctrl+O")
         menu.add_command(label="Save", command=self._kb_save, accelerator="Ctrl+S")
         menu.add_command(label="Save as", command=self._kb_save_as, accelerator="Ctrl+Shift+S")
         menu.add_separator()
         menu.add_command(label="Close Project", command=self.model.unload_project)
-        menu.add_command(label="Export Image", command=self.model.subject.export.notify)
+        menu.add_command(label="Export Image", command=painter.export_comp_image)
         menu.add_separator()
         menu.add_command(label="Exit", command=self.master.quit)
 

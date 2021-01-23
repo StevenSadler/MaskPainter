@@ -12,12 +12,12 @@ class CanvasControl:
             self._unbind()
 
     def _bind(self):
-        # left mouse button to paint / pan with space
+        # left mouse button to paint
         self.canvas.bind('<Button-1>', self.painter.paint)
         self.canvas.bind('<B1-Motion>', self.painter.paint)
         self.canvas.bind('<ButtonRelease-1>', self.painter.end_brush_stroke)
 
-        # left mouse button to paint / pan with space
+        # middle mouse button to pan
         self.canvas.bind('<Button-2>', self.painter.pan)
         self.canvas.bind('<B2-Motion>', self.painter.pan)
         self.canvas.bind('<ButtonRelease-2>', self.painter.end_pan)
@@ -31,16 +31,19 @@ class CanvasControl:
         self.canvas.bind('<Motion>', self._mouse_move)
         self.canvas.bind('<Leave>', self._mouse_exit)
 
+        # mousewheel to zoom
+        self.canvas.bind('<MouseWheel>', self.painter.zoom)
+
         # resize
         self.canvas.bind('<Configure>', self.painter.resize)
 
     def _unbind(self):
-        # left mouse button to paint / pan with space
+        # left mouse button to paint
         self.canvas.unbind('<Button-1>')
         self.canvas.unbind('<B1-Motion>')
         self.canvas.unbind('<ButtonRelease-1>')
 
-        # left mouse button to paint / pan with space
+        # middle mouse button to pan
         self.canvas.unbind('<Button-2>')
         self.canvas.unbind('<B2-Motion>')
         self.canvas.unbind('<ButtonRelease-2>')
@@ -54,13 +57,14 @@ class CanvasControl:
         self.canvas.unbind('<Motion>')
         self.canvas.unbind('<Leave>')
 
+        # mousewheel to zoom
+        self.canvas.unbind('<MouseWheel>')
+
         # resize
         self.canvas.unbind('<Configure>')
 
     def _mouse_move(self, e):
         self.painter.render_canvas_image()
-        # if not self._is_pan_mode:
-        #     self.painter.render_brush_outline(e.x, e.y)
         self.painter.render_brush_outline(e.x, e.y)
 
     def _mouse_exit(self, _):

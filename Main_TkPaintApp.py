@@ -20,8 +20,8 @@ class TkPaintApp(Frame):
         self.master.title(self._appTitle)
 
         # vars used for widget sizes and root geometry
-        canvas_width = 640    # 256
-        canvas_height = 360   # 256
+        canvas_width = 250   # 640    # 256
+        canvas_height = 250  # 360   # 256
 
         # the only 2 supported systems are Windows 7 and Windows 10
         # tkinter widgets in the control panel render at different widths on Windows 7 and Windows 10

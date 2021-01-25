@@ -4,11 +4,13 @@ import copy
 from src.ObservableSubject import ObservableSubject
 from src.model.ProjectModel import ProjectModel
 from src.model.LayerModel import LayerModel
+from src.model.CanvasModel import CanvasModel
 from src.model.UndoHistory import UndoHistory
 
 
 class Subject:
     def __init__(self):
+        self.load = ObservableSubject()
         self.project = ObservableSubject()
         self.layer = ObservableSubject()
         self.undo = ObservableSubject()
@@ -22,6 +24,7 @@ class Model:
             self.subject = Subject()
             self.project = ProjectModel()
             self.layer = LayerModel()
+            self.canvas = CanvasModel()
             self._history = UndoHistory(20)
 
         # save subject
@@ -149,6 +152,7 @@ class Model:
                 return
 
         self._reset()
+        self.subject.load.notify()
         self.subject.project.notify()
         self.subject.save.notify()
         self.subject.undo.notify()
@@ -169,8 +173,9 @@ class Model:
 
         self.isProjectLoaded = True
         self.isCurrentSaved = True
+        self.subject.load.notify()
         self.subject.project.notify()
-        self.subject.undo.notify()
+        # self.subject.undo.notify()
 
     def prompt_create_project(self):
         if not self.isCurrentSaved:

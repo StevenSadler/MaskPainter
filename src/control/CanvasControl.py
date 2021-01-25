@@ -1,41 +1,44 @@
+from tkinter import messagebox
+
+
 class CanvasControl:
     def __init__(self, canvas, model, painter):
         self.canvas = canvas
         self.model = model
-        self.model.subject.project.attach(self._update_project)
+        self.model.subject.load.attach(self._update_load)
         self.painter = painter
 
-    def _update_project(self):
+    def _update_load(self):
         if self.model.isProjectLoaded:
+            canvas_size = (self.canvas.winfo_width(), self.canvas.winfo_height())
+            self.model.canvas.load(self.model.project.imgSize, canvas_size)
             self._bind()
         else:
+            self.model.canvas.reset()
             self._unbind()
 
     def _bind(self):
         # left mouse button to paint
-        self.canvas.bind('<Button-1>', self.painter.paint)
+        self.canvas.bind('<Button-1>', self._start_paint)
         self.canvas.bind('<B1-Motion>', self.painter.paint)
-        self.canvas.bind('<ButtonRelease-1>', self.painter.end_brush_stroke)
+        self.canvas.bind('<ButtonRelease-1>', self._end_brush_stroke)
 
         # middle mouse button to pan
-        self.canvas.bind('<Button-2>', self.painter.pan)
+        self.canvas.bind('<Button-2>', self._start_pan)
         self.canvas.bind('<B2-Motion>', self.painter.pan)
-        self.canvas.bind('<ButtonRelease-2>', self.painter.end_pan)
+        self.canvas.bind('<ButtonRelease-2>', self._end_pan)
 
         # right mouse button to erase
-        self.canvas.bind('<Button-3>', self.painter.erase)
+        self.canvas.bind('<Button-3>', self._start_erase)
         self.canvas.bind('<B3-Motion>', self.painter.erase)
-        self.canvas.bind('<ButtonRelease-3>', self.painter.end_brush_stroke)
+        self.canvas.bind('<ButtonRelease-3>', self._end_brush_stroke)
 
         # any mouse motion to draw black outline circle
         self.canvas.bind('<Motion>', self._mouse_move)
         self.canvas.bind('<Leave>', self._mouse_exit)
 
-        # mousewheel to zoom
-        self.canvas.bind('<MouseWheel>', self.painter.zoom)
-
         # resize
-        self.canvas.bind('<Configure>', self.painter.resize)
+        self.canvas.bind('<Configure>', self._resize)
 
     def _unbind(self):
         # left mouse button to paint
@@ -57,11 +60,29 @@ class CanvasControl:
         self.canvas.unbind('<Motion>')
         self.canvas.unbind('<Leave>')
 
-        # mousewheel to zoom
-        self.canvas.unbind('<MouseWheel>')
-
         # resize
         self.canvas.unbind('<Configure>')
+
+    def _start_paint(self, e):
+        if self.model.layer.visibility[self.model.layer.activeMask]:
+            self.painter.paint(e)
+        else:
+            self._prompt_show_invisible_active_layer()
+
+    def _start_erase(self, e):
+        if self.model.layer.visibility[self.model.layer.activeMask]:
+            self.painter.erase(e)
+        else:
+            self._prompt_show_invisible_active_layer()
+
+    def _start_pan(self, e):
+        self.painter.pan(e)
+
+    def _end_brush_stroke(self, e):
+        self.painter.end_brush_stroke(e)
+
+    def _end_pan(self, e):
+        self.painter.end_pan(e)
 
     def _mouse_move(self, e):
         self.painter.render_canvas_image()
@@ -69,3 +90,18 @@ class CanvasControl:
 
     def _mouse_exit(self, _):
         self.painter.render_canvas_image()
+
+    def _resize(self, e):
+        if self.model.isProjectLoaded:
+            canvas_size = (e.width, e.height)
+            self.model.canvas.resize_canvas(canvas_size)
+            self.painter.resize()
+
+    def _prompt_show_invisible_active_layer(self):
+        layer_name = self.model.project.layerNames[self.model.layer.activeMask]
+        message = "The active layer {} is hidden. Do you wish to make it visible to allow painting?".format(
+            layer_name)
+        is_ok = messagebox.askyesno(title="Confirm", message=message, icon="warning")
+
+        if is_ok:
+            self.model.toggle_layer_visibility(self.model.layer.activeMask)

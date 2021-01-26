@@ -1,4 +1,5 @@
 from tkinter import messagebox
+import math
 
 
 class CanvasControl:
@@ -40,6 +41,8 @@ class CanvasControl:
         # resize
         self.canvas.bind('<Configure>', self._resize)
 
+        self._bind_zoom()
+
     def _unbind(self):
         # left mouse button to paint
         self.canvas.unbind('<Button-1>')
@@ -63,25 +66,48 @@ class CanvasControl:
         # resize
         self.canvas.unbind('<Configure>')
 
+        self._unbind_zoom()
+
+    def _bind_zoom(self):
+        self.canvas.bind('<MouseWheel>', self._zoom)
+
+    def _unbind_zoom(self):
+        self.canvas.unbind('<MouseWheel>')
+
+    def _zoom(self, e):
+        if e.delta > 0 and self.model.canvas.zoom < self.model.canvas.max_zoom:
+            # zoom in
+            self.model.zoom(self.model.canvas.zoom * 2)
+            self.painter.zoom(e)
+        elif e.delta < 0 and self.model.canvas.zoom > self.model.canvas.min_zoom:
+            # zoom out
+            self.model.zoom(int(math.ceil(self.model.canvas.zoom / 2)))
+            self.painter.zoom(e)
+
     def _start_paint(self, e):
         if self.model.layer.visibility[self.model.layer.activeMask]:
+            self._unbind_zoom()
             self.painter.paint(e)
         else:
-            self._prompt_show_invisible_active_layer()
+            self._prompt_show_active_layer()
 
     def _start_erase(self, e):
         if self.model.layer.visibility[self.model.layer.activeMask]:
+            self._unbind_zoom()
             self.painter.erase(e)
         else:
-            self._prompt_show_invisible_active_layer()
+            self._prompt_show_active_layer()
 
     def _start_pan(self, e):
+        self._unbind_zoom()
         self.painter.pan(e)
 
     def _end_brush_stroke(self, e):
+        self._bind_zoom()
         self.painter.end_brush_stroke(e)
 
     def _end_pan(self, e):
+        self._bind_zoom()
         self.painter.end_pan(e)
 
     def _mouse_move(self, e):
@@ -97,7 +123,7 @@ class CanvasControl:
             self.model.canvas.resize_canvas(canvas_size)
             self.painter.resize()
 
-    def _prompt_show_invisible_active_layer(self):
+    def _prompt_show_active_layer(self):
         layer_name = self.model.project.layerNames[self.model.layer.activeMask]
         message = "The active layer {} is hidden. Do you wish to make it visible to allow painting?".format(
             layer_name)

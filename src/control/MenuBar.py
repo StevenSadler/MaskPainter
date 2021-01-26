@@ -29,9 +29,9 @@ class MenuBar:
         top_menu.add_cascade(label="Edit", menu=edit_menu)
         self._init_edit_menu(edit_menu)
 
-        debug_menu = Menu(top_menu)
-        top_menu.add_cascade(label="Debug", menu=debug_menu)
-        self._init_debug_menu(debug_menu)
+        # debug_menu = Menu(top_menu)
+        # top_menu.add_cascade(label="Debug", menu=debug_menu)
+        # self._init_debug_menu(debug_menu)
 
     def _init_file_menu(self, menu, painter):
         menu.add_command(label="New", command=self._kb_create_project, accelerator="Ctrl+N")
@@ -66,6 +66,7 @@ class MenuBar:
 
     def _init_debug_menu(self, menu):
         menu.add_command(label="Break App", command=self.app.breakpoint_app)
+        menu.add_command(label="CanvasModel", command=self.model.canvas.debug_out)
 
     @staticmethod
     def _add_toggle(toggle_list, menu, index, key=None, on_key_press=None):

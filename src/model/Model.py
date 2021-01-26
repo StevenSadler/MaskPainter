@@ -13,6 +13,7 @@ class Subject:
         self.load = ObservableSubject()
         self.project = ObservableSubject()
         self.layer = ObservableSubject()
+        self.zoom = ObservableSubject()
         self.undo = ObservableSubject()
         self.save = ObservableSubject()
         self.export = ObservableSubject()
@@ -100,6 +101,10 @@ class Model:
             self.project.remove_layer(layer)
             self.layer.remove_layer(layer - 1)
             self._notify_needs_save()
+
+    def zoom(self, zoom_factor):
+        self.canvas.set_zoom(zoom_factor)
+        self.subject.zoom.notify()
 
     def save_undo_state(self):
         project = copy.deepcopy(self.project)

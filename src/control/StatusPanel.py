@@ -6,6 +6,10 @@ class StatusPanel:
         self.model.subject.project.attach(self._update_project)
         self.model.subject.save.attach(self._update_save)
         self.model.subject.export.attach(self._update_export)
+        self.model.subject.zoom.attach(self._update_zoom)
+
+    def _update_zoom(self):
+        self.status.config(text="Update: ZOOM: zoom={}".format(self.model.canvas.zoom))
 
     def _update_layer(self):
         active_layer = self.model.layer.activeMask

@@ -21,62 +21,14 @@ class CanvasPainter:
         self._brush_position = None
         self._pan_position = None
 
-    def _update_layer(self):
-        self._bg_image = self._comp_bg_image()
-        self._fg_image = self._comp_fg_image()
-        self.render_canvas_image()
-
     def _update_project(self):
         if self.model.isProjectLoaded:
             self._update_layer()
 
-    def _refresh_zoom(self):
-        # world space, canvas space, mask space need refresh after zoom
-        pass
-
-    def _get_mask(self, mask_num):
-        cv_mask = self.model.project.cvMasks[mask_num]
-
-        # get the minimum crop needed to fill the canvas
-        crop = cv_mask[
-               self.model.canvas.ms_crop_y:self.model.canvas.ms_crop_y + self.model.canvas.ms_crop_h,
-               self.model.canvas.ms_crop_x:self.model.canvas.ms_crop_x + self.model.canvas.ms_crop_w
-        ]
-
-        zoom = self.model.canvas.zoom
-        if zoom > 1:
-            crop = np.kron(crop, np.ones((zoom, zoom), dtype=np.uint8))
-        return crop
-
-    def _get_masked_image(self, mask_num, show_all=False):
-        ws_crop_size = self.model.canvas.ws_crop_size()
-        if mask_num < self.model.project.numMasks:
-            mask = Image.fromarray(self._get_mask(mask_num))
-            mask.convert('L').resize(ws_crop_size)
-            image = Image.new('RGBA', ws_crop_size, self.model.project.layerColors[mask_num + 1])
-            if self.model.layer.visibility[mask_num] or show_all:
-                image.putalpha(mask)
-            else:
-                image.putalpha(0)
-            return image
-        else:
-            image = Image.new('RGBA', ws_crop_size, 'magenta')
-            image.putalpha(0)
-            return image
-
-    def _comp_bg_image(self, show_all=False):
-        composite = Image.new('RGBA', self.model.canvas.ws_crop_size(), self.model.project.layerColors[0])
-        for i in range(self.model.layer.activeMask):
-            front = self._get_masked_image(i, show_all)
-            composite = Image.alpha_composite(composite, front)
-        return composite
-
-    def _comp_fg_image(self, show_all=False):
-        composite = self._get_masked_image(self.model.layer.activeMask + 1, show_all)
-        for i in range(self.model.layer.activeMask + 1, self.model.project.numMasks):
-            front = self._get_masked_image(i, show_all)
-            composite = Image.alpha_composite(composite, front)
-        return composite
+    def _update_layer(self):
+        self._bg_image = self._comp_bg_image()
+        self._fg_image = self._comp_fg_image()
+        self.render_canvas_image()
 
     def render_canvas_image(self):
         active_layer_image = self._get_masked_image(self.model.layer.activeMask)
@@ -95,13 +47,10 @@ class CanvasPainter:
         r = self.model.brushSize * self.model.canvas.zoom
         self.canvas.create_oval(x - r, y - r, x + r, y + r)
 
-    ################################
-    #
-    #  controller calls
-    #
-    ################################
-
     def export_comp_image(self):
+        old_zoom = self.model.canvas.zoom
+        self.model.canvas.set_zoom(1)
+
         temp_bg = self._comp_bg_image(show_all=True)
         temp_fg = self._comp_fg_image(show_all=True)
         temp_active_layer_image = self._get_masked_image(self.model.layer.activeMask, show_all=True)
@@ -110,6 +59,11 @@ class CanvasPainter:
 
         # send the PIL image to the model to save to disk
         self.model.export_comp_image(composite)
+        self.model.canvas.set_zoom(old_zoom)
+
+    def zoom(self, e):
+        self._update_project()
+        self.render_brush_outline(e.x, e.y)
 
     def resize(self):
         self._update_layer()
@@ -137,6 +91,12 @@ class CanvasPainter:
         if self.model.isCurrentSaved:
             self.model.set_mask_edited()
 
+    ###########################################################################
+    #
+    #  helpers
+    #
+    ###########################################################################
+
     def _edit_active_mask(self, e, color):
         active_mask = self.model.project.cvMasks[self.model.layer.activeMask]
         x, y = self.model.canvas.mouse_canvas_to_world(e)
@@ -151,3 +111,44 @@ class CanvasPainter:
         self.render_canvas_image()
         self.render_brush_outline(e.x, e.y)
         self._brush_position = (x, y)
+
+    def _get_mask(self, mask_num):
+        cv_mask = self.model.project.cvMasks[mask_num]
+        zoom_img = cv_mask[
+                   self.model.canvas.ms_zoom_top:self.model.canvas.ms_zoom_bottom,
+                   self.model.canvas.ms_zoom_left:self.model.canvas.ms_zoom_right
+        ]
+        zoom = self.model.canvas.zoom
+        if zoom > 1:
+            zoom_img = np.kron(zoom_img, np.ones((zoom, zoom), dtype=np.uint8))
+        return zoom_img
+
+    def _get_masked_image(self, mask_num, show_all=False):
+        ws_zoom_size = self.model.canvas.ws_zoom_size()
+        if mask_num < self.model.project.numMasks:
+            mask = Image.fromarray(self._get_mask(mask_num))
+            mask.convert('L').resize(ws_zoom_size)
+            image = Image.new('RGBA', ws_zoom_size, self.model.project.layerColors[mask_num + 1])
+            if self.model.layer.visibility[mask_num] or show_all:
+                image.putalpha(mask)
+            else:
+                image.putalpha(0)
+            return image
+        else:
+            image = Image.new('RGBA', ws_zoom_size, 'magenta')
+            image.putalpha(0)
+            return image
+
+    def _comp_bg_image(self, show_all=False):
+        composite = Image.new('RGBA', self.model.canvas.ws_zoom_size(), self.model.project.layerColors[0])
+        for i in range(self.model.layer.activeMask):
+            front = self._get_masked_image(i, show_all)
+            composite = Image.alpha_composite(composite, front)
+        return composite
+
+    def _comp_fg_image(self, show_all=False):
+        composite = self._get_masked_image(self.model.layer.activeMask + 1, show_all)
+        for i in range(self.model.layer.activeMask + 1, self.model.project.numMasks):
+            front = self._get_masked_image(i, show_all)
+            composite = Image.alpha_composite(composite, front)
+        return composite

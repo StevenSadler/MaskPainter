@@ -19,6 +19,9 @@ class ProjectModel:
         self.compRootDir = None          # ie. 'C:/some_path/app_root/projects/comp/'
         self.maskRootDir = None          # ie. 'C:/some_path/app_root/projects/mask/'
 
+        self.backgroundImagePath = None
+        self.cvBackgroundImage = None
+
         self.layerColors = []
         self.layerNames = []
         self.cvMasks = []
@@ -75,8 +78,10 @@ class ProjectModel:
         self._save_project_json()
         self._save_masks()
 
-    def create_project(self, project_file_path):
+    def create_project(self, project_file_path, bg_image_file_path=None):
         self.unload()
+        if bg_image_file_path:
+            self.backgroundImagePath = bg_image_file_path
         self._set_paths(project_file_path)
         self._read_default_config(self._config_file_path, self.projectName)
         self._save_project_json()
@@ -112,14 +117,28 @@ class ProjectModel:
         # fill in the missing data
         self.numMasks = len(self.layerNames) - 1
         self.cvMasks = []
-        h = config.mask_height
-        w = config.mask_width
+
+        if self.backgroundImagePath:
+            # need to get h and w from background image
+            temp_bg = cv.imread(self.backgroundImagePath)
+            print("temp bg shape {}".format(temp_bg.shape))
+            h = temp_bg.shape[0]
+            w = temp_bg.shape[1]
+        else:
+            h = config.mask_height
+            w = config.mask_width
+
         for i in range(self.numMasks):
             self.cvMasks.append(np.zeros((h, w, 3), dtype=np.uint8))
         self.imgSize = (w, h)
 
     def _read_project_json(self, project_file_path):
         obj = self._read_json_file(project_file_path)
+
+        if hasattr(obj, "background_image_path"):
+            self.backgroundImagePath = obj.background_image_path
+            cv_bg = cv.imread(self.backgroundImagePath)
+            self.cvBackgroundImage = cv.cvtColor(cv_bg, cv.COLOR_BGR2RGBA)
 
         # derive data from project file
         self.layerColors = obj.layer_colors
@@ -144,6 +163,9 @@ class ProjectModel:
             "layer_colors": self.layerColors,
             "layer_names": self.layerNames,
         }
+        if self.backgroundImagePath:
+            dictionary["background_image_path"] = self.backgroundImagePath
+
         with open(self.projectPath, 'w') as outfile:
             json.dump(dictionary, outfile, indent=4)
         outfile.close()

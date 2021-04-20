@@ -38,6 +38,7 @@ class MenuBar:
         menu.add_command(label="Open", command=self._kb_load_project, accelerator="Ctrl+O")
         menu.add_command(label="Save", command=self._kb_save, accelerator="Ctrl+S")
         menu.add_command(label="Save as", command=self._kb_save_as, accelerator="Ctrl+Shift+S")
+        menu.add_command(label="New + BG image", command=self._kb_create_background_project, accelerator="Ctrl+Shift+N")
         menu.add_separator()
         menu.add_command(label="Close Project", command=self.model.unload_project)
         menu.add_command(label="Export Image", command=painter.export_comp_image)
@@ -56,6 +57,7 @@ class MenuBar:
         # bind the keyboard shortcuts that will always be on
         self.master.bind('<Control-o>', self._kb_load_project)
         self.master.bind('<Control-n>', self._kb_create_project)
+        self.master.bind('<Control-N>', self._kb_create_background_project)
 
     def _init_edit_menu(self, menu):
         menu.add_command(label="Undo", command=self._kb_undo, accelerator="Ctrl+Z", state=DISABLED)
@@ -101,6 +103,9 @@ class MenuBar:
             self._set_item_state(self._disable_no_redo, DISABLED)
 
     # keyboard shortcut and button handlers
+    def _kb_create_background_project(self, _=None):
+        self.model.prompt_create_background_project()
+
     def _kb_create_project(self, _=None):
         self.model.prompt_create_project()
 

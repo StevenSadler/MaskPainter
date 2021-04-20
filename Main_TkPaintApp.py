@@ -27,9 +27,9 @@ class TkPaintApp(Frame):
         # tkinter widgets in the control panel render at different widths on Windows 7 and Windows 10
         # so change the panel width to accommodate the widgets
         if platform.system() == "Windows" and platform.release() == "7":
-            control_panel_width = 200
+            self.control_panel_width = 200
         else:
-            control_panel_width = 226
+            self.control_panel_width = 226
 
         # model must be initialized before widgets and controllers
         model = Model()
@@ -42,7 +42,7 @@ class TkPaintApp(Frame):
         canvas = Canvas(self.master, width=canvas_width, height=canvas_height,
                         highlightthickness=0, bg="gray50", relief=RAISED)
 
-        notebook = Notebook(self.master, width=control_panel_width)
+        notebook = Notebook(self.master, width=self.control_panel_width)
         brush_frame = Frame(notebook)
         layer_frame = Frame(notebook)
         notebook.add(brush_frame, text="Brush")
@@ -64,15 +64,16 @@ class TkPaintApp(Frame):
         self.canvasControl = CanvasControl(canvas, model, painter)
 
         # set the geometry of the Tk root
-        status_height = 17
-        req_buffer = 4
-        offset_y = -40
-        width = control_panel_width + canvas_width + req_buffer
-        height = canvas_height + status_height + req_buffer
-        x = (self.master.winfo_screenwidth() - width) // 2
-        y = (self.master.winfo_screenheight() - height) // 2 + offset_y
-        self.master.minsize(width, height)
-        self.master.geometry("{}x{}+{}+{}".format(width, height, x, y))
+        self._set_geometry(canvas_width, canvas_height)
+        # status_height = 17
+        # req_buffer = 4
+        # offset_y = -40
+        # width = self.control_panel_width + canvas_width + req_buffer
+        # height = canvas_height + status_height + req_buffer
+        # x = (self.master.winfo_screenwidth() - width) // 2
+        # y = (self.master.winfo_screenheight() - height) // 2 + offset_y
+        # self.master.minsize(width, height)
+        # self.master.geometry("{}x{}+{}+{}".format(width, height, x, y))
 
         # to initialize the views, force a subject project notification
         model.subject.project.notify()
@@ -90,6 +91,20 @@ class TkPaintApp(Frame):
             self.master.title(self._appTitle)
         else:
             self.master.title("{} - {}".format(self._appTitle, self.model.project.projectFileName))
+            w, h = self.model.project.imgSize
+            self._set_geometry(w, h)
+
+    def _set_geometry(self, canvas_w, canvas_h):
+        # set the geometry of the Tk root
+        status_height = 17
+        req_buffer = 4
+        offset_y = -40
+        width = self.control_panel_width + canvas_w + req_buffer
+        height = canvas_h + status_height + req_buffer              # canvas_h + status_height + req_buffer
+        x = (self.master.winfo_screenwidth() - width) // 2
+        y = (self.master.winfo_screenheight() - height) // 2 + offset_y
+        self.master.minsize(width, height)
+        self.master.geometry("{}x{}+{}+{}".format(width, height, x, y))
 
     # menu bar click handlers
     def breakpoint_app(self):

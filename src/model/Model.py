@@ -174,6 +174,7 @@ class Model:
 
     def load_project(self, project_file_path):
         self.project.load_project(project_file_path)
+        self.canvas.resize_canvas(self.project.imgSize)
         self.layer.init_model(self.project.numMasks)
 
         self.isProjectLoaded = True
@@ -194,3 +195,22 @@ class Model:
         if project_file_path:
             self.project.create_project(project_file_path)
             self.load_project(project_file_path)
+
+    def prompt_create_background_project(self):
+        if not self.isCurrentSaved:
+            is_ok = messagebox.askyesno("Open Project", "You will lose any unsaved data. Are you sure?")
+            if not is_ok:
+                return
+
+        project_file_path = filedialog.asksaveasfilename(title="Create a project json file",
+                                                         defaultextension=".json",
+                                                         filetypes=[("json files", "*.json")])
+        if project_file_path:
+            bg_image_file_path = filedialog.askopenfilename(title="Open background image file",
+                                                            defaultextension=".jpg",
+                                                            filetypes=[("jpg files", "*.jpg")])
+            if bg_image_file_path:
+                print("project file path {}".format(project_file_path))
+                print("bg image file path {}".format(bg_image_file_path))
+                self.project.create_project(project_file_path, bg_image_file_path)
+                self.load_project(project_file_path)

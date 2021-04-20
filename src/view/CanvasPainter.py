@@ -16,24 +16,26 @@ class CanvasPainter:
         self._color_erase = 'black'
 
         # vars needing reset
-        self._bg_image = None
-        self._fg_image = None
+        self._bg_comp = None
+        self._fg_comp = None
         self._brush_position = None
         self._pan_position = None
 
     def _update_project(self):
         if self.model.isProjectLoaded:
+            if self.model.project.backgroundImagePath:
+                self._bg_image = Image.open(self.model.project.backgroundImagePath).convert('RGBA')
             self._update_layer()
 
     def _update_layer(self):
-        self._bg_image = self._comp_bg_image()
-        self._fg_image = self._comp_fg_image()
+        self._bg_comp = self._comp_bg_image()
+        self._fg_comp = self._comp_fg_image()
         self.render_canvas_image()
 
     def render_canvas_image(self):
         active_layer_image = self._get_masked_image(self.model.layer.activeMask)
-        composite = Image.alpha_composite(self._bg_image, active_layer_image)
-        composite = Image.alpha_composite(composite, self._fg_image)
+        composite = Image.alpha_composite(self._bg_comp, active_layer_image)
+        composite = Image.alpha_composite(composite, self._fg_comp)
 
         self.canvas.delete(ALL)
 
@@ -51,7 +53,7 @@ class CanvasPainter:
         old_zoom = self.model.canvas.zoom
         self.model.canvas.set_zoom(1)
 
-        temp_bg = self._comp_bg_image(show_all=True)
+        temp_bg = self._bg_comp(show_all=True)
         temp_fg = self._comp_fg_image(show_all=True)
         temp_active_layer_image = self._get_masked_image(self.model.layer.activeMask, show_all=True)
         composite = Image.alpha_composite(temp_bg, temp_active_layer_image)
@@ -112,6 +114,25 @@ class CanvasPainter:
         self.render_brush_outline(e.x, e.y)
         self._brush_position = (x, y)
 
+    def _get_zoom_cv(self, cv_image):
+        zoom_img = cv_image[
+                   self.model.canvas.ms_zoom_top:self.model.canvas.ms_zoom_bottom,
+                   self.model.canvas.ms_zoom_left:self.model.canvas.ms_zoom_right,
+                   :
+        ]
+        zoom = self.model.canvas.zoom
+        if zoom > 1:
+            zoom_img = np.kron(zoom_img, np.ones((zoom, zoom, 1), dtype=np.uint8))
+        return zoom_img
+
+    def _get_zoom_cv_bg_image(self):
+        ws_zoom_size = self.model.canvas.ws_zoom_size()
+        cv_bg = self.model.project.cvBackgroundImage
+        zoom_cv_bg = self._get_zoom_cv(cv_bg)
+        image = Image.fromarray(zoom_cv_bg)
+        image.resize(ws_zoom_size)
+        return image
+
     def _get_mask(self, mask_num):
         cv_mask = self.model.project.cvMasks[mask_num]
         zoom_img = cv_mask[
@@ -140,7 +161,10 @@ class CanvasPainter:
             return image
 
     def _comp_bg_image(self, show_all=False):
-        composite = Image.new('RGBA', self.model.canvas.ws_zoom_size(), self.model.project.layerColors[0])
+        if self.model.project.backgroundImagePath:
+            composite = self._get_zoom_cv_bg_image()
+        else:
+            composite = Image.new('RGBA', self.model.canvas.ws_zoom_size(), self.model.project.layerColors[0])
         for i in range(self.model.layer.activeMask):
             front = self._get_masked_image(i, show_all)
             composite = Image.alpha_composite(composite, front)

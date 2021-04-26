@@ -53,7 +53,7 @@ class CanvasPainter:
         old_zoom = self.model.canvas.zoom
         self.model.canvas.set_zoom(1)
 
-        temp_bg = self._bg_comp(show_all=True)
+        temp_bg = self._comp_bg_image(show_all=True)
         temp_fg = self._comp_fg_image(show_all=True)
         temp_active_layer_image = self._get_masked_image(self.model.layer.activeMask, show_all=True)
         composite = Image.alpha_composite(temp_bg, temp_active_layer_image)

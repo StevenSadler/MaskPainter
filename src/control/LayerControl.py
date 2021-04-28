@@ -30,29 +30,28 @@ class LayerControl:
                 args[c].grid(row=self._next_row, column=c)
             self._next_row += 1
 
+        def grid_row_offset(offset, *args):
+            for c in range(len(args)):
+                args[c].grid(row=self._next_row, column=c + offset)
+            self._next_row += 1
+
         label = Label(self.master, text='Edit layers')
 
-        bg_name_button = Button(self.master, width='10', text=self.model.project.layerNames[0],
-                                command=lambda layer=0: self._prompt_layer_name(layer))
-        bg_color_button = Button(self.master, width='3', bg=self.model.project.layerColors[0],
-                                 command=lambda layer=0: self._prompt_layer_color_chooser(layer))
-        bg_hex_button = Button(self.master, width='7', text=self.model.project.layerColors[0],
-                               command=lambda layer=0: self._prompt_layer_hex_color(layer))
         bg_add_button = Button(self.master, width='2', text='+',
-                               command=lambda layer=0: self.model.add_layer(layer + 1))
+                               command=lambda layer=0: self.model.add_layer(layer))
 
         layer_rows = []
         for mask in range(self.model.project.numMasks):
-            name_button = Button(self.master, width='10', text=self.model.project.layerNames[mask + 1],
-                                 command=lambda layer=mask+1: self._prompt_layer_name(layer))
-            color_button = Button(self.master, width='3', bg=self.model.project.layerColors[mask + 1],
-                                  command=lambda layer=mask+1: self._prompt_layer_color_chooser(layer))
-            hex_button = Button(self.master, width='7', text=self.model.project.layerColors[mask + 1],
-                                command=lambda layer=mask+1: self._prompt_layer_hex_color(layer))
+            name_button = Button(self.master, width='10', text=self.model.project.layerNames[mask],
+                                 command=lambda layer=mask: self._prompt_layer_name(layer))
+            color_button = Button(self.master, width='3', bg=self.model.project.layerColors[mask],
+                                  command=lambda layer=mask: self._prompt_layer_color_chooser(layer))
+            hex_button = Button(self.master, width='7', text=self.model.project.layerColors[mask],
+                                command=lambda layer=mask: self._prompt_layer_hex_color(layer))
             add_button = Button(self.master, width='2', text='+',
-                                command=lambda layer=mask+1: self.model.add_layer(layer + 1))
+                                command=lambda layer=mask+1: self.model.add_layer(layer))
             remove_button = Button(self.master, width='2', text='-',
-                                   command=lambda layer=mask+1: self.model.remove_layer(layer))
+                                   command=lambda layer=mask: self.model.remove_layer(layer))
 
             if self.model.project.numMasks == 1:
                 remove_button.config(state=DISABLED)
@@ -66,7 +65,7 @@ class LayerControl:
         grid_row(label)
         for i in range(self.model.project.numMasks - 1, -1, -1):
             grid_row(*layer_rows[i])
-        grid_row(bg_name_button, bg_color_button, bg_hex_button, bg_add_button)
+        grid_row_offset(3, *[bg_add_button])
 
     ################################
     #

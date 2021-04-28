@@ -149,7 +149,7 @@ class CanvasPainter:
         if mask_num < self.model.project.numMasks:
             mask = Image.fromarray(self._get_mask(mask_num))
             mask.convert('L').resize(ws_zoom_size)
-            image = Image.new('RGBA', ws_zoom_size, self.model.project.layerColors[mask_num + 1])
+            image = Image.new('RGBA', ws_zoom_size, self.model.project.layerColors[mask_num])
             if self.model.layer.visibility[mask_num] or show_all:
                 image.putalpha(mask)
             else:
@@ -164,7 +164,7 @@ class CanvasPainter:
         if self.model.project.backgroundImagePath:
             composite = self._get_zoom_cv_bg_image()
         else:
-            composite = Image.new('RGBA', self.model.canvas.ws_zoom_size(), self.model.project.layerColors[0])
+            composite = Image.new('RGBA', self.model.canvas.ws_zoom_size(), self.model.project.default_background_color)
         for i in range(self.model.layer.activeMask):
             front = self._get_masked_image(i, show_all)
             composite = Image.alpha_composite(composite, front)

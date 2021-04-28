@@ -13,6 +13,8 @@ class ProjectModel:
         self._comp_dir = "comp"
         self._mask_dir = "mask"
 
+        self.default_background_color = "#3399ff"
+
         self.projectPath = None          # ie. 'C:/some_path/app_root/projects/example_project.json'
         self.projectFileName = None      # ie. 'example_project.json'
         self.projectName = None          # ie. 'example_project'
@@ -46,8 +48,8 @@ class ProjectModel:
             "default_project_settings": {
                 "mask_width": 640,
                 "mask_height": 360,
-                "layer_colors": ["#3399ff", "#ffffb3", "#b3ff99", "#dfbf9f"],
-                "layer_names": ["Ocean", "Lowlands", "Hills", "Mountains"]
+                "layer_colors": ["#ffffb3", "#b3ff99", "#dfbf9f"],
+                "layer_names": ["Lowlands", "Hills", "Mountains"]
             }
         }
         with open(config_file_path, 'w') as outfile:
@@ -115,7 +117,7 @@ class ProjectModel:
         self.layerNames = config.layer_names
 
         # fill in the missing data
-        self.numMasks = len(self.layerNames) - 1
+        self.numMasks = len(self.layerNames)
         self.cvMasks = []
 
         if self.backgroundImagePath:
@@ -143,7 +145,7 @@ class ProjectModel:
         # derive data from project file
         self.layerColors = obj.layer_colors
         self.layerNames = obj.layer_names
-        self.numMasks = len(obj.layer_names) - 1
+        self.numMasks = len(obj.layer_names)
         self.cvMasks = []
         for i in range(self.numMasks):
             mask_filename = self._generate_mask_file_name(self.projectName, i + 1)
@@ -179,21 +181,24 @@ class ProjectModel:
 
     def insert_layer(self, layer):
         # insert in layer colors, layer names, cv masks
-        if layer > self.numMasks:
+        if layer == 0:
+            color = self.layerColors[layer]
+        elif layer >= self.numMasks:
             color = self.layerColors[layer-1]
         else:
             color = Utils.average_hex_colors(self.layerColors[layer-1], self.layerColors[layer])
+
         self.layerColors.insert(layer, color)
         self.layerNames.insert(layer, "New layer")
         w, h = self.imgSize
         cv_mask_bgr = np.zeros((h, w, 3), dtype=np.uint8)
         cv_mask = cv.cvtColor(cv_mask_bgr, cv.COLOR_BGR2GRAY)
-        self.cvMasks.insert(layer-1, cv_mask)
+        self.cvMasks.insert(layer, cv_mask)
         self.numMasks = len(self.cvMasks)
 
     def remove_layer(self, layer):
         self.layerColors.pop(layer)
         self.layerNames.pop(layer)
-        self.cvMasks.pop(layer - 1)
+        self.cvMasks.pop(layer)
         self.numMasks = len(self.cvMasks)
 

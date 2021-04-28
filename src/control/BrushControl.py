@@ -56,13 +56,10 @@ class BrushControl:
 
         label = Label(self.master, text='Active Layer')
 
-        bg_label = Label(self.master, width='10', text=self.model.project.layerNames[0])
-        bg_color_button = Button(self.master, width='8', bg=self.model.project.layerColors[0], state=DISABLED)
-
         layer_rows = []
         for mask in range(self.model.project.numMasks):
-            layer_label = Label(self.master, width='10', text=self.model.project.layerNames[mask + 1])
-            color_button = Button(self.master, width='8', bg=self.model.project.layerColors[mask + 1],
+            layer_label = Label(self.master, width='10', text=self.model.project.layerNames[mask])
+            color_button = Button(self.master, width='8', bg=self.model.project.layerColors[mask],
                                   command=lambda layer=mask: self.model.set_active_layer(layer))
             layer_viz = Checkbutton(self.master, text='show',
                                     command=lambda layer=mask: self.model.toggle_layer_visibility(layer))
@@ -77,4 +74,3 @@ class BrushControl:
         grid_row(label)
         for i in range(self.model.project.numMasks - 1, -1, -1):
             grid_row(layer_rows[i][0], layer_rows[i][1], layer_rows[i][2])
-        grid_row(bg_label, bg_color_button)

@@ -34,6 +34,7 @@ class TkPaintApp(Frame):
         # model must be initialized before widgets and controllers
         model = Model()
         model.subject.save.attach(self._update_save)
+        model.subject.load.attach(self._update_load)
         model.subject.project.attach(self._update_project)
         self.model = model
 
@@ -82,6 +83,9 @@ class TkPaintApp(Frame):
             self.master.title(self._appTitle)
         else:
             self.master.title("{} - {}".format(self._appTitle, self.model.project.projectFileName))
+
+    def _update_load(self):
+        if self.model.isProjectLoaded:
             w, h = self.model.project.imgSize
             self._set_geometry(w, h)
 

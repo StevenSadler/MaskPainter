@@ -57,14 +57,12 @@ class Model:
 
     # change layer data and notify observers
     def set_active_layer(self, layer):
+        self.save_undo_state()
         self.project.set_active_layer(layer)
         self._notify_needs_save()
 
-    def set_layer_visibility(self, layer, vis):
-        self.project.set_layer_visibility(layer, vis)
-        self._notify_needs_save()
-
     def toggle_layer_visibility(self, layer):
+        self.save_undo_state()
         self.project.toggle_layer_visibility(layer)
         self._notify_needs_save()
 

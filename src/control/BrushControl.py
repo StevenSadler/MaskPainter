@@ -15,6 +15,7 @@ class BrushControl:
         self._next_row = 0
         self._active_indicators = []
         self._viz_boxes = []
+        self._mask_opacity = None
 
     def _update_layer(self):
         for i in range(self.model.project.numMasks):
@@ -28,17 +29,29 @@ class BrushControl:
             else:
                 self._viz_boxes[i].deselect()
 
+            if self.model.project.maskOpaque:
+                self._mask_opacity.select()
+            else:
+                self._mask_opacity.deselect()
+
     def _update_project(self):
         for widget in self.master.winfo_children():
             widget.grid_forget()
             widget.destroy()
         if self.model.isProjectLoaded:
             self._reset()
+            self._add_mask_opacity()
             self._add_brush_slider()
             self._add_active_layer_controls()
 
             # initialize active indicators and viz boxes
             self._update_layer()
+
+    def _add_mask_opacity(self):
+        Label(self.master, text='Layer Opacity').grid(row=self._next_row, column=0)
+        self._mask_opacity = Checkbutton(self.master, text='opaque', command=self.model.toggle_mask_opacity)
+        self._mask_opacity.grid(row=self._next_row, column=1)
+        self._next_row += 1
 
     def _add_brush_slider(self):
         Label(self.master, text='Brush Radius').grid(row=self._next_row, column=0)

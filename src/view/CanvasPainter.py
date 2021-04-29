@@ -149,7 +149,10 @@ class CanvasPainter:
     def _get_masked_image(self, mask_num, show_all=False):
         ws_zoom_size = self.model.canvas.ws_zoom_size()
         if mask_num < self.model.project.numMasks:
-            mask = Image.fromarray(self._get_mask(mask_num))
+            if self.model.project.maskOpaque:
+                mask = Image.fromarray(self._get_mask(mask_num))
+            else:
+                mask = Image.fromarray(self._get_mask(mask_num) // 2)
             mask.convert('L').resize(ws_zoom_size)
             image = Image.new('RGBA', ws_zoom_size, self.model.project.layerColors[mask_num])
             if self.model.project.visibility[mask_num] or show_all:

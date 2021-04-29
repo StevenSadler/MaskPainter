@@ -38,6 +38,7 @@ class ProjectModel:
 
         self.visibility = []
         self.activeMask = 0
+        self.maskOpaque = False
 
         self.imgSize = None
         self.numMasks = None
@@ -62,7 +63,8 @@ class ProjectModel:
                 "layer_colors": ["#ffffb3", "#b3ff99", "#dfbf9f"],
                 "layer_names": ["Lowlands", "Hills", "Mountains"],
                 "layer_viz": [True, True, True],
-                "active_mask": 0
+                "active_mask": 0,
+                "mask_opaque": True
             }
         }
         with open(config_file_path, 'w') as outfile:
@@ -129,6 +131,7 @@ class ProjectModel:
         self.layerColors = config.layer_colors
         self.layerNames = config.layer_names
         self.visibility = config.layer_viz
+        self.maskOpaque = config.mask_opaque
 
         # fill in the missing data
         self.numMasks = len(self.layerNames)
@@ -161,6 +164,7 @@ class ProjectModel:
         self.layerNames = obj.layer_names
         self.visibility = obj.layer_viz
         self.activeMask = obj.active_mask
+        self.maskOpaque = obj.mask_opaque
         self.numMasks = len(obj.layer_names)
         self.cvMasks = []
         for i in range(self.numMasks):
@@ -181,7 +185,8 @@ class ProjectModel:
             "layer_colors": self.layerColors,
             "layer_names": self.layerNames,
             "layer_viz": self.visibility,
-            "active_mask": self.activeMask
+            "active_mask": self.activeMask,
+            "mask_opaque": self.maskOpaque
         }
         if self.backgroundImagePath:
             dictionary["background_image_path"] = self.backgroundImagePath
@@ -235,4 +240,7 @@ class ProjectModel:
 
     def toggle_layer_visibility(self, layer):
         self.visibility[layer] = not self.visibility[layer]
+
+    def toggle_mask_opacity(self):
+        self.maskOpaque = not self.maskOpaque
 

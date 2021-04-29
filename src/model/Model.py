@@ -56,6 +56,11 @@ class Model:
         self.brushSize = int(float(event))
 
     # change layer data and notify observers
+    def toggle_mask_opacity(self):
+        self.save_undo_state()
+        self.project.toggle_mask_opacity()
+        self._notify_needs_save()
+
     def set_active_layer(self, layer):
         self.save_undo_state()
         self.project.set_active_layer(layer)

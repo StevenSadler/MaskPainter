@@ -18,12 +18,12 @@ class BrushControl:
 
     def _update_layer(self):
         for i in range(self.model.project.numMasks):
-            if self.model.layer.activeMask == i:
+            if self.model.project.activeMask == i:
                 self._active_indicators[i].config(text='Active')
             else:
                 self._active_indicators[i].config(text='')
 
-            if self.model.layer.visibility[i]:
+            if self.model.project.visibility[i]:
                 self._viz_boxes[i].select()
             else:
                 self._viz_boxes[i].deselect()

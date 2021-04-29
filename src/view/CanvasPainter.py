@@ -26,6 +26,8 @@ class CanvasPainter:
             if self.model.project.backgroundImagePath:
                 self._bg_image = Image.open(self.model.project.backgroundImagePath).convert('RGBA')
             self._update_layer()
+        else:
+            self.canvas.delete(ALL)
 
     def _update_layer(self):
         self._bg_comp = self._comp_bg_image()
@@ -33,7 +35,7 @@ class CanvasPainter:
         self.render_canvas_image()
 
     def render_canvas_image(self):
-        active_layer_image = self._get_masked_image(self.model.layer.activeMask)
+        active_layer_image = self._get_masked_image(self.model.project.activeMask)
         composite = Image.alpha_composite(self._bg_comp, active_layer_image)
         composite = Image.alpha_composite(composite, self._fg_comp)
 
@@ -55,7 +57,7 @@ class CanvasPainter:
 
         temp_bg = self._comp_bg_image(show_all=True)
         temp_fg = self._comp_fg_image(show_all=True)
-        temp_active_layer_image = self._get_masked_image(self.model.layer.activeMask, show_all=True)
+        temp_active_layer_image = self._get_masked_image(self.model.project.activeMask, show_all=True)
         composite = Image.alpha_composite(temp_bg, temp_active_layer_image)
         composite = Image.alpha_composite(composite, temp_fg)
 
@@ -100,7 +102,7 @@ class CanvasPainter:
     ###########################################################################
 
     def _edit_active_mask(self, e, color):
-        active_mask = self.model.project.cvMasks[self.model.layer.activeMask]
+        active_mask = self.model.project.cvMasks[self.model.project.activeMask]
         x, y = self.model.canvas.mouse_canvas_to_world(e)
 
         if self._brush_position:
@@ -150,7 +152,7 @@ class CanvasPainter:
             mask = Image.fromarray(self._get_mask(mask_num))
             mask.convert('L').resize(ws_zoom_size)
             image = Image.new('RGBA', ws_zoom_size, self.model.project.layerColors[mask_num])
-            if self.model.layer.visibility[mask_num] or show_all:
+            if self.model.project.visibility[mask_num] or show_all:
                 image.putalpha(mask)
             else:
                 image.putalpha(0)
@@ -165,14 +167,14 @@ class CanvasPainter:
             composite = self._get_zoom_cv_bg_image()
         else:
             composite = Image.new('RGBA', self.model.canvas.ws_zoom_size(), self.model.project.default_background_color)
-        for i in range(self.model.layer.activeMask):
+        for i in range(self.model.project.activeMask):
             front = self._get_masked_image(i, show_all)
             composite = Image.alpha_composite(composite, front)
         return composite
 
     def _comp_fg_image(self, show_all=False):
-        composite = self._get_masked_image(self.model.layer.activeMask + 1, show_all)
-        for i in range(self.model.layer.activeMask + 1, self.model.project.numMasks):
+        composite = self._get_masked_image(self.model.project.activeMask + 1, show_all)
+        for i in range(self.model.project.activeMask + 1, self.model.project.numMasks):
             front = self._get_masked_image(i, show_all)
             composite = Image.alpha_composite(composite, front)
         return composite

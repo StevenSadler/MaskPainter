@@ -65,15 +65,6 @@ class TkPaintApp(Frame):
 
         # set the geometry of the Tk root
         self._set_geometry(canvas_width, canvas_height)
-        # status_height = 17
-        # req_buffer = 4
-        # offset_y = -40
-        # width = self.control_panel_width + canvas_width + req_buffer
-        # height = canvas_height + status_height + req_buffer
-        # x = (self.master.winfo_screenwidth() - width) // 2
-        # y = (self.master.winfo_screenheight() - height) // 2 + offset_y
-        # self.master.minsize(width, height)
-        # self.master.geometry("{}x{}+{}+{}".format(width, height, x, y))
 
         # to initialize the views, force a subject project notification
         model.subject.project.notify()

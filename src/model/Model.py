@@ -3,7 +3,6 @@ import copy
 
 from src.ObservableSubject import ObservableSubject
 from src.model.ProjectModel import ProjectModel
-from src.model.LayerModel import LayerModel
 from src.model.CanvasModel import CanvasModel
 from src.model.UndoHistory import UndoHistory
 
@@ -24,7 +23,6 @@ class Model:
         if not is_reset:
             self.subject = Subject()
             self.project = ProjectModel()
-            self.layer = LayerModel()
             self.canvas = CanvasModel()
             self._history = UndoHistory(20)
 
@@ -59,16 +57,16 @@ class Model:
 
     # change layer data and notify observers
     def set_active_layer(self, layer):
-        self.layer.set_active_layer(layer)
-        self.subject.layer.notify()
+        self.project.set_active_layer(layer)
+        self._notify_needs_save()
 
     def set_layer_visibility(self, layer, vis):
-        self.layer.set_layer_visibility(layer, vis)
-        self.subject.layer.notify()
+        self.project.set_layer_visibility(layer, vis)
+        self._notify_needs_save()
 
     def toggle_layer_visibility(self, layer):
-        self.layer.toggle_layer_visibility(layer)
-        self.subject.layer.notify()
+        self.project.toggle_layer_visibility(layer)
+        self._notify_needs_save()
 
     def set_layer_name(self, layer, name):
         self.save_undo_state()
@@ -91,7 +89,6 @@ class Model:
     def add_layer(self, layer):
         self.save_undo_state()
         self.project.insert_layer(layer)
-        self.layer.insert_layer(layer - 1)
         self._notify_needs_save()
 
     def remove_layer(self, layer):
@@ -99,7 +96,6 @@ class Model:
         if self.project.numMasks > 1:
             self.save_undo_state()
             self.project.remove_layer(layer)
-            self.layer.remove_layer(layer - 1)
             self._notify_needs_save()
 
     def zoom(self, zoom_factor):
@@ -108,8 +104,7 @@ class Model:
 
     def save_undo_state(self):
         project = copy.deepcopy(self.project)
-        layer = copy.deepcopy(self.layer)
-        self._history.save_state((project, layer))
+        self._history.save_state(project)
         self.subject.undo.notify()
 
     def _notify_needs_save(self):
@@ -127,12 +122,12 @@ class Model:
 
     def undo(self):
         if self._history.has_undo():
-            self.project, self.layer = self._history.undo((self.project, self.layer))
+            self.project = self._history.undo(self.project)
             self._notify_needs_save()
 
     def redo(self):
         if self._history.has_redo():
-            self.project, self.layer = self._history.redo((self.project, self.layer))
+            self.project = self._history.redo(self.project)
             self._notify_needs_save()
 
     def save(self):
@@ -161,6 +156,7 @@ class Model:
         self.subject.project.notify()
         self.subject.save.notify()
         self.subject.undo.notify()
+        stop_here=1
 
     def prompt_load_project(self):
         if not self.isCurrentSaved:
@@ -175,7 +171,6 @@ class Model:
     def load_project(self, project_file_path):
         self.project.load_project(project_file_path)
         self.canvas.resize_canvas(self.project.imgSize)
-        self.layer.init_model(self.project.numMasks)
 
         self.isProjectLoaded = True
         self.isCurrentSaved = True

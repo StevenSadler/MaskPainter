@@ -85,14 +85,14 @@ class CanvasControl:
             self.painter.zoom(e)
 
     def _start_paint(self, e):
-        if self.model.layer.visibility[self.model.layer.activeMask]:
+        if self.model.project.visibility[self.model.project.activeMask]:
             self._unbind_zoom()
             self.painter.paint(e)
         else:
             self._prompt_show_active_layer()
 
     def _start_erase(self, e):
-        if self.model.layer.visibility[self.model.layer.activeMask]:
+        if self.model.project.visibility[self.model.project.activeMask]:
             self._unbind_zoom()
             self.painter.erase(e)
         else:
@@ -124,10 +124,10 @@ class CanvasControl:
             self.painter.resize()
 
     def _prompt_show_active_layer(self):
-        layer_name = self.model.project.layerNames[self.model.layer.activeMask]
+        layer_name = self.model.project.layerNames[self.model.project.activeMask]
         message = "The active layer {} is hidden. Do you wish to make it visible to allow painting?".format(
             layer_name)
         is_ok = messagebox.askyesno(title="Confirm", message=message, icon="warning")
 
         if is_ok:
-            self.model.toggle_layer_visibility(self.model.layer.activeMask)
+            self.model.toggle_layer_visibility(self.model.project.activeMask)

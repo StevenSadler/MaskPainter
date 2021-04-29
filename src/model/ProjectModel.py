@@ -7,6 +7,14 @@ import numpy as np
 from src.Utils import Utils
 
 
+# class Layer:
+#     def __init__(self, name, color, cv_mask, visible):
+#         self.name = name
+#         self.color = color
+#         self.cvMask = cv_mask
+#         self.visible = visible
+
+
 class ProjectModel:
     def __init__(self):
         self._config_file_path = "MaskPainter_config.json"
@@ -27,6 +35,9 @@ class ProjectModel:
         self.layerColors = []
         self.layerNames = []
         self.cvMasks = []
+
+        self.visibility = []
+        self.activeMask = 0
 
         self.imgSize = None
         self.numMasks = None
@@ -49,7 +60,9 @@ class ProjectModel:
                 "mask_width": 640,
                 "mask_height": 360,
                 "layer_colors": ["#ffffb3", "#b3ff99", "#dfbf9f"],
-                "layer_names": ["Lowlands", "Hills", "Mountains"]
+                "layer_names": ["Lowlands", "Hills", "Mountains"],
+                "layer_viz": [True, True, True],
+                "active_mask": 0
             }
         }
         with open(config_file_path, 'w') as outfile:
@@ -115,6 +128,7 @@ class ProjectModel:
         # derive data from config
         self.layerColors = config.layer_colors
         self.layerNames = config.layer_names
+        self.visibility = config.layer_viz
 
         # fill in the missing data
         self.numMasks = len(self.layerNames)
@@ -145,6 +159,8 @@ class ProjectModel:
         # derive data from project file
         self.layerColors = obj.layer_colors
         self.layerNames = obj.layer_names
+        self.visibility = obj.layer_viz
+        self.activeMask = obj.active_mask
         self.numMasks = len(obj.layer_names)
         self.cvMasks = []
         for i in range(self.numMasks):
@@ -164,6 +180,8 @@ class ProjectModel:
             "project_name": self.projectName,
             "layer_colors": self.layerColors,
             "layer_names": self.layerNames,
+            "layer_viz": self.visibility,
+            "active_mask": self.activeMask
         }
         if self.backgroundImagePath:
             dictionary["background_image_path"] = self.backgroundImagePath
@@ -190,6 +208,7 @@ class ProjectModel:
 
         self.layerColors.insert(layer, color)
         self.layerNames.insert(layer, "New layer")
+        self.visibility.insert(layer, True)
         w, h = self.imgSize
         cv_mask_bgr = np.zeros((h, w, 3), dtype=np.uint8)
         cv_mask = cv.cvtColor(cv_mask_bgr, cv.COLOR_BGR2GRAY)
@@ -199,6 +218,21 @@ class ProjectModel:
     def remove_layer(self, layer):
         self.layerColors.pop(layer)
         self.layerNames.pop(layer)
+        self.visibility.pop(layer)
         self.cvMasks.pop(layer)
         self.numMasks = len(self.cvMasks)
+
+        if self.activeMask == layer:
+            self.activeMask = 0
+
+    # refactored here from LayerModel
+    def set_active_layer(self, layer):
+        self.activeMask = layer
+        self.visibility[layer] = True
+
+    def set_layer_visibility(self, layer, vis):
+        self.visibility[layer] = vis
+
+    def toggle_layer_visibility(self, layer):
+        self.visibility[layer] = not self.visibility[layer]
 

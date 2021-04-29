@@ -12,8 +12,8 @@ class StatusPanel:
         self.status.config(text="Update: ZOOM: zoom={}".format(self.model.canvas.zoom))
 
     def _update_layer(self):
-        active_layer = self.model.layer.activeMask
-        vis = self.model.layer.visibility
+        active_layer = self.model.project.activeMask
+        vis = self.model.project.visibility
         self.status.config(text="Update: LAYER: active={} vis={}".format(active_layer, vis))
 
     def _update_project(self):

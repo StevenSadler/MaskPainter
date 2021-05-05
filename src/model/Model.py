@@ -71,6 +71,11 @@ class Model:
         self.project.toggle_layer_visibility(z)
         self._notify_needs_save()
 
+    def toggle_layer_lock(self, z):
+        self.save_undo_state()
+        self.project.toggle_layer_lock(z)
+        self._notify_needs_save()
+
     def set_layer_name(self, z, name):
         self.save_undo_state()
         self.project.get_layer_by_z(z).name = name
@@ -131,6 +136,12 @@ class Model:
     def redo(self):
         if self._history.has_redo():
             self.project = self._history.redo(self.project)
+            self._notify_needs_save()
+
+    def move_active(self, before, after):
+        if before != after and after >= 0 and after < self.project.numMasks:
+            self.save_undo_state()
+            self.project.move_active(before, after)
             self._notify_needs_save()
 
     def save(self):

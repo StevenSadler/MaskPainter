@@ -297,13 +297,27 @@ class ProjectModel:
         self.activeLayer = self.get_layer_by_z(z)
         self.activeLayer.isVisible = True
 
-    def set_layer_visibility(self, z, vis):
-        self.get_layer_by_z(z).isVisible = vis
+    # def set_layer_visibility(self, z, vis):
+    #     self.get_layer_by_z(z).isVisible = vis
 
     def toggle_layer_visibility(self, z):
         layer = self.get_layer_by_z(z)
         layer.isVisible = not layer.isVisible
 
+    def toggle_layer_lock(self, z):
+        layer = self.get_layer_by_z(z)
+        layer.isLocked = not layer.isLocked
+
     def toggle_mask_opacity(self):
         self.maskOpaque = not self.maskOpaque
+
+    def move_active(self, before, after):
+        if before != after:
+            uid = self.layerKeys.pop(before)
+            if after < self.numMasks - 1:
+                self.layerKeys.insert(after, str(uid))
+            else:
+                self.layerKeys.append(str(uid))
+            self.activeMask = after
+
 

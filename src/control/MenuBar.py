@@ -10,6 +10,7 @@ class MenuBar:
         self.master = master
         self.model = model
         self.model.subject.project.attach(self._update_project)
+        self.model.subject.layer.attach(self._update_layer)
         self.model.subject.undo.attach(self._update_undo)
 
         # toggle lists to control normal/disabled state of menu buttons and keyboard shortcuts
@@ -17,6 +18,8 @@ class MenuBar:
         self._disable_unloaded = []
         self._disable_no_undo = []
         self._disable_no_redo = []
+        self._disable_is_top = []
+        self._disable_is_bottom = []
 
         top_menu = Menu(self.master)
         self.master.config(menu=top_menu)
@@ -62,9 +65,19 @@ class MenuBar:
     def _init_edit_menu(self, menu):
         menu.add_command(label="Undo", command=self._kb_undo, accelerator="Ctrl+Z", state=DISABLED)
         menu.add_command(label="Redo", command=self._kb_redo, accelerator="Ctrl+Y", state=DISABLED)
+        menu.add_separator()
+        menu.add_command(label="Move Active to Top", command=self._kb_move_top, state=DISABLED)
+        menu.add_command(label="Move Active Up", command=self._kb_move_up, state=DISABLED)
+        menu.add_command(label="Move Active Down", command=self._kb_move_down, state=DISABLED)
+        menu.add_command(label="Move Active to Bottom", command=self._kb_move_bottom, state=DISABLED)
 
         self._add_toggle(self._disable_no_undo, menu, menu.index("Undo"), '<Control-z>', self._kb_undo)
         self._add_toggle(self._disable_no_redo, menu, menu.index("Redo"), '<Control-y>', self._kb_redo)
+
+        self._add_toggle(self._disable_is_top, menu, menu.index("Move Active to Top"))
+        self._add_toggle(self._disable_is_top, menu, menu.index("Move Active Up"))
+        self._add_toggle(self._disable_is_bottom, menu, menu.index("Move Active Down"))
+        self._add_toggle(self._disable_is_bottom, menu, menu.index("Move Active to Bottom"))
 
     def _init_debug_menu(self, menu):
         menu.add_command(label="Break App", command=self.app.breakpoint_app)
@@ -90,6 +103,21 @@ class MenuBar:
         else:
             self._set_item_state(self._disable_unloaded, DISABLED)
             self._set_item_state(self._disable_loaded, NORMAL)
+        self._update_layer()
+
+    def _update_layer(self):
+        if not self.model.isProjectLoaded:
+            self._set_item_state(self._disable_is_top, DISABLED)
+            self._set_item_state(self._disable_is_bottom, DISABLED)
+        elif self.model.project.activeMask == 0:
+            self._set_item_state(self._disable_is_top, NORMAL)
+            self._set_item_state(self._disable_is_bottom, DISABLED)
+        elif self.model.project.activeMask == self.model.project.numMasks - 1:
+            self._set_item_state(self._disable_is_top, DISABLED)
+            self._set_item_state(self._disable_is_bottom, NORMAL)
+        else:
+            self._set_item_state(self._disable_is_top, NORMAL)
+            self._set_item_state(self._disable_is_bottom, NORMAL)
 
     def _update_undo(self):
         if self.model.has_undo():
@@ -123,3 +151,15 @@ class MenuBar:
 
     def _kb_redo(self, _=None):
         self.model.redo()
+
+    def _kb_move_top(self):
+        self.model.move_active(self.model.project.activeMask, self.model.project.numMasks - 1)
+
+    def _kb_move_bottom(self):
+        self.model.move_active(self.model.project.activeMask, 0)
+
+    def _kb_move_up(self):
+        self.model.move_active(self.model.project.activeMask, self.model.project.activeMask + 1)
+
+    def _kb_move_down(self):
+        self.model.move_active(self.model.project.activeMask, self.model.project.activeMask - 1)

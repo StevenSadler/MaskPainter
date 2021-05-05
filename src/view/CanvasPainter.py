@@ -105,7 +105,7 @@ class CanvasPainter:
         active_layer = self.model.project.activeLayer
         x, y = self.model.canvas.mouse_canvas_to_world(e)
 
-        if active_layer.isVisible:
+        if active_layer.isVisible and not active_layer.isLocked:
             if self._brush_position:
                 bx, by = self._brush_position
                 cv.line(active_layer.cvMask, (bx, by), (x, y), color, self.model.brushSize * 2)

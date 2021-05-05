@@ -61,24 +61,24 @@ class Model:
         self.project.toggle_mask_opacity()
         self._notify_needs_save()
 
-    def set_active_layer(self, layer):
+    def set_active_layer(self, z):
         self.save_undo_state()
-        self.project.set_active_layer(layer)
+        self.project.set_active_layer(z)
         self._notify_needs_save()
 
-    def toggle_layer_visibility(self, layer):
+    def toggle_layer_visibility(self, z):
         self.save_undo_state()
-        self.project.toggle_layer_visibility(layer)
+        self.project.toggle_layer_visibility(z)
         self._notify_needs_save()
 
-    def set_layer_name(self, layer, name):
+    def set_layer_name(self, z, name):
         self.save_undo_state()
-        self.project.layerNames[layer] = name
+        self.project.get_layer_by_z(z).name = name
         self._notify_needs_save()
 
-    def set_layer_color(self, layer, color):
+    def set_layer_color(self, z, color):
         self.save_undo_state()
-        self.project.layerColors[layer] = color
+        self.project.get_layer_by_z(z).color = color
         self._notify_needs_save()
 
     def set_mask_edited(self):
@@ -208,7 +208,5 @@ class Model:
                                                             defaultextension=".jpg",
                                                             filetypes=[("jpg files", "*.jpg")])
             if bg_image_file_path:
-                print("project file path {}".format(project_file_path))
-                print("bg image file path {}".format(bg_image_file_path))
                 self.project.create_project(project_file_path, bg_image_file_path)
                 self.load_project(project_file_path)

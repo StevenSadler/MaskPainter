@@ -18,16 +18,18 @@ class BrushControl:
         self._mask_opacity = None
 
     def _update_layer(self):
-        for i in range(self.model.project.numMasks):
-            if self.model.project.activeMask == i:
-                self._active_indicators[i].config(text='Active')
-            else:
-                self._active_indicators[i].config(text='')
+        for z in range(self.model.project.numMasks):
+            layer = self.model.project.get_layer_by_z(z)
 
-            if self.model.project.visibility[i]:
-                self._viz_boxes[i].select()
+            if self.model.project.activeMask == z:
+                self._active_indicators[z].config(text='Active')
             else:
-                self._viz_boxes[i].deselect()
+                self._active_indicators[z].config(text='')
+
+            if layer.isVisible:
+                self._viz_boxes[z].select()
+            else:
+                self._viz_boxes[z].deselect()
 
             if self.model.project.maskOpaque:
                 self._mask_opacity.select()
@@ -70,12 +72,13 @@ class BrushControl:
         label = Label(self.master, text='Active Layer')
 
         layer_rows = []
-        for mask in range(self.model.project.numMasks):
-            layer_label = Label(self.master, width='10', text=self.model.project.layerNames[mask])
-            color_button = Button(self.master, width='8', bg=self.model.project.layerColors[mask],
-                                  command=lambda layer=mask: self.model.set_active_layer(layer))
+        for z in range(self.model.project.numMasks):
+            layer = self.model.project.get_layer_by_z(z)
+            layer_label = Label(self.master, width='10', text=layer.name)
+            color_button = Button(self.master, width='8', bg=layer.color,
+                                  command=lambda i=z: self.model.set_active_layer(i))
             layer_viz = Checkbutton(self.master, text='show',
-                                    command=lambda layer=mask: self.model.toggle_layer_visibility(layer))
+                                    command=lambda i=z: self.model.toggle_layer_visibility(i))
             layer_rows.append((layer_label, color_button, layer_viz))
 
             self._active_indicators.append(color_button)
@@ -85,5 +88,5 @@ class BrushControl:
         # so those at the top will be in the foreground
         # and those at the bottom will be in the background
         grid_row(label)
-        for i in range(self.model.project.numMasks - 1, -1, -1):
-            grid_row(layer_rows[i][0], layer_rows[i][1], layer_rows[i][2])
+        for z in range(self.model.project.numMasks - 1, -1, -1):
+            grid_row(layer_rows[z][0], layer_rows[z][1], layer_rows[z][2])

@@ -1,18 +1,12 @@
 import json
 from types import SimpleNamespace
 import os
+import time
 import cv2 as cv
 import numpy as np
 
 from src.Utils import Utils
-
-
-# class Layer:
-#     def __init__(self, name, color, cv_mask, visible):
-#         self.name = name
-#         self.color = color
-#         self.cvMask = cv_mask
-#         self.visible = visible
+from src.model.Layer import Layer
 
 
 class ProjectModel:
@@ -32,13 +26,12 @@ class ProjectModel:
         self.backgroundImagePath = None
         self.cvBackgroundImage = None
 
-        self.layerColors = []
-        self.layerNames = []
-        self.cvMasks = []
-
-        self.visibility = []
-        self.activeMask = 0
+        self.activeLayer = None
+        self.activeMask = -1
         self.maskOpaque = False
+
+        self.layers = dict()
+        self.layerKeys = []
 
         self.imgSize = None
         self.numMasks = None
@@ -47,12 +40,16 @@ class ProjectModel:
         self.__init__()
 
     @staticmethod
+    def _generate_layer_uid():
+        return round(time.time() * 1000)
+
+    @staticmethod
     def _generate_comp_file_name(image_prefix):
         return "{}_comp.png".format(image_prefix)
 
     @staticmethod
-    def _generate_mask_file_name(image_prefix, image_num):
-        return "{}_mask{}.jpg".format(image_prefix, image_num)
+    def _generate_mask_file_name(image_prefix, image_key):
+        return "{}_mask{}.jpg".format(image_prefix, image_key)
 
     @staticmethod
     def _write_default_config(config_file_path):
@@ -60,10 +57,30 @@ class ProjectModel:
             "default_project_settings": {
                 "mask_width": 640,
                 "mask_height": 360,
-                "layer_colors": ["#ffffb3", "#b3ff99", "#dfbf9f"],
-                "layer_names": ["Lowlands", "Hills", "Mountains"],
-                "layer_viz": [True, True, True],
-                "active_mask": 0,
+                "layer_keys": [],
+                "layers": {},
+                # "layer_keys": ["11", "22", "33"],
+                # "layers": {
+                #     "11": {
+                #         "name": "Lowlands",
+                #         "color": "#ffffb3",
+                #         "visible": True,
+                #         "locked": False
+                #     },
+                #     "22": {
+                #         "name": "Hills",
+                #         "color": "#b3ff99",
+                #         "visible": True,
+                #         "locked": False
+                #     },
+                #     "33": {
+                #         "name": "Mountains",
+                #         "color": "#dfbf9f",
+                #         "visible": True,
+                #         "locked": False
+                #     },
+                # },
+                "active_mask": -1,
                 "mask_opaque": True
             }
         }
@@ -77,6 +94,18 @@ class ProjectModel:
         obj = json.load(f, object_hook=lambda d: SimpleNamespace(**d))
         f.close()
         return obj
+
+    def get_layer_by_z(self, z):
+        return self.get_layer_by_uid(self.layerKeys[z])
+
+    def get_layer_by_uid(self, uid):
+        return self.layers[uid]
+
+    def get_visibility_list(self):
+        vis = []
+        for z in range(self.numMasks):
+            vis.append(self.get_layer_by_z(z).isVisible)
+        return vis
 
     def export_comp_image(self, pil_image):
         if not os.path.exists(self.compRootDir):
@@ -127,29 +156,33 @@ class ProjectModel:
         obj = self._read_json_file(config_file_path)
         config = obj.default_project_settings
 
-        # derive data from config
-        self.layerColors = config.layer_colors
-        self.layerNames = config.layer_names
-        self.visibility = config.layer_viz
-        self.maskOpaque = config.mask_opaque
-
-        # fill in the missing data
-        self.numMasks = len(self.layerNames)
-        self.cvMasks = []
-
         if self.backgroundImagePath:
             # need to get h and w from background image
             temp_bg = cv.imread(self.backgroundImagePath)
-            print("temp bg shape {}".format(temp_bg.shape))
             h = temp_bg.shape[0]
             w = temp_bg.shape[1]
         else:
             h = config.mask_height
             w = config.mask_width
 
-        for i in range(self.numMasks):
-            self.cvMasks.append(np.zeros((h, w, 3), dtype=np.uint8))
         self.imgSize = (w, h)
+
+        # derive data from config
+        self.maskOpaque = config.mask_opaque
+        self.activeMask = config.active_mask
+        self.numMasks = len(config.layer_keys)
+        self.layerKeys = config.layer_keys
+        layers = config.layers.__dict__
+
+        for i in range(self.numMasks):
+            k = self.layerKeys[i]
+            mask = np.zeros((h, w, 3), dtype=np.uint8)
+            layer = layers[k].__dict__
+            self.layers[k] = Layer(layer, mask)
+
+        if self.numMasks == 0:
+            self.insert_layer(0, "#ff00ff")
+            self.set_active_layer(0)
 
     def _read_project_json(self, project_file_path):
         obj = self._read_json_file(project_file_path)
@@ -160,31 +193,46 @@ class ProjectModel:
             self.cvBackgroundImage = cv.cvtColor(cv_bg, cv.COLOR_BGR2RGBA)
 
         # derive data from project file
-        self.layerColors = obj.layer_colors
-        self.layerNames = obj.layer_names
-        self.visibility = obj.layer_viz
         self.activeMask = obj.active_mask
         self.maskOpaque = obj.mask_opaque
-        self.numMasks = len(obj.layer_names)
-        self.cvMasks = []
+        self.numMasks = len(obj.layer_keys)
+        self.layerKeys = obj.layer_keys
+        layers = obj.layers.__dict__
+
         for i in range(self.numMasks):
-            mask_filename = self._generate_mask_file_name(self.projectName, i + 1)
+            k = self.layerKeys[i]
+            mask_filename = self._generate_mask_file_name(self.projectName, k)
             mask_path = os.path.join(self.maskRootDir, mask_filename)
             cv_mask_bgr = cv.imread(mask_path)
             cv_mask = cv.cvtColor(cv_mask_bgr, cv.COLOR_BGR2GRAY)
-            self.cvMasks.append(cv_mask)
+
+            layer = layers[k].__dict__
+            self.layers[k] = Layer(layer, cv_mask)
+
+            if self.activeMask == i:
+                self.activeLayer = self.layers[k]
 
         # fill in the missing data
-        self.imgSize = (self.cvMasks[0].shape[1], self.cvMasks[0].shape[0])
+        mask0 = self.layers[self.layerKeys[0]].cvMask
+        self.imgSize = (mask0.shape[1], mask0.shape[0])
 
     def _save_project_json(self):
         # build a json from python data
         # save json to file
+
+        json_layers = {}
+        for i in range(self.numMasks):
+            k = self.layerKeys[i]
+            layer = self.layers[k]
+            json_layers[k] = {"name": layer.name,
+                              "color": layer.color,
+                              "visible": layer.isVisible,
+                              "locked": layer.isLocked}
+
         dictionary = {
             "project_name": self.projectName,
-            "layer_colors": self.layerColors,
-            "layer_names": self.layerNames,
-            "layer_viz": self.visibility,
+            "layer_keys": self.layerKeys,
+            "layers": json_layers,
             "active_mask": self.activeMask,
             "mask_opaque": self.maskOpaque
         }
@@ -199,47 +247,62 @@ class ProjectModel:
         if not os.path.exists(self.maskRootDir):
             os.mkdir(self.maskRootDir)
         for i in range(self.numMasks):
-            mask_filename = self._generate_mask_file_name(self.projectName, i+1)
-            cv.imwrite(os.path.join(self.maskRootDir, mask_filename), self.cvMasks[i])
+            k = self.layerKeys[i]
+            mask_filename = self._generate_mask_file_name(self.projectName, k)
+            cv.imwrite(os.path.join(self.maskRootDir, mask_filename), self.layers[k].cvMask)
 
-    def insert_layer(self, layer):
-        # insert in layer colors, layer names, cv masks
-        if layer == 0:
-            color = self.layerColors[layer]
-        elif layer >= self.numMasks:
-            color = self.layerColors[layer-1]
-        else:
-            color = Utils.average_hex_colors(self.layerColors[layer-1], self.layerColors[layer])
+    def insert_layer(self, z, color=None):
+        if not color:
+            if z == 0:
+                color = self.get_layer_by_z(z).color
+            else:
+                if z == self.numMasks:
+                    color = self.get_layer_by_z(z-1).color
+                else:
+                    color = Utils.average_hex_colors(self.get_layer_by_z(z-1).color, self.get_layer_by_z(z).color)
 
-        self.layerColors.insert(layer, color)
-        self.layerNames.insert(layer, "New layer")
-        self.visibility.insert(layer, True)
         w, h = self.imgSize
         cv_mask_bgr = np.zeros((h, w, 3), dtype=np.uint8)
         cv_mask = cv.cvtColor(cv_mask_bgr, cv.COLOR_BGR2GRAY)
-        self.cvMasks.insert(layer, cv_mask)
-        self.numMasks = len(self.cvMasks)
+        uid = self._generate_layer_uid()
 
-    def remove_layer(self, layer):
-        self.layerColors.pop(layer)
-        self.layerNames.pop(layer)
-        self.visibility.pop(layer)
-        self.cvMasks.pop(layer)
-        self.numMasks = len(self.cvMasks)
+        json_layer = {"name": "New Layer",
+                      "color": color,
+                      "visible": True,
+                      "locked": False}
+        self.layers[str(uid)] = Layer(json_layer, cv_mask)
+        if z < self.numMasks:
+            self.layerKeys.insert(z, str(uid))
+        else:
+            self.layerKeys.append(str(uid))
+        self.numMasks = len(self.layerKeys)
 
-        if self.activeMask == layer:
-            self.activeMask = 0
+        if self.activeMask >= z:
+            self.set_active_layer(self.activeMask + 1)
+
+    def remove_layer(self, z):
+        uid = self.layerKeys[z]
+        self.layerKeys.pop(z)
+        del self.layers[uid]
+
+        self.numMasks = len(self.layerKeys)
+        if self.activeMask == z:
+            self.set_active_layer(0)
+        elif self.activeMask > z:
+            self.set_active_layer(self.activeMask - 1)
 
     # refactored here from LayerModel
-    def set_active_layer(self, layer):
-        self.activeMask = layer
-        self.visibility[layer] = True
+    def set_active_layer(self, z):
+        self.activeMask = z
+        self.activeLayer = self.get_layer_by_z(z)
+        self.activeLayer.isVisible = True
 
-    def set_layer_visibility(self, layer, vis):
-        self.visibility[layer] = vis
+    def set_layer_visibility(self, z, vis):
+        self.get_layer_by_z(z).isVisible = vis
 
-    def toggle_layer_visibility(self, layer):
-        self.visibility[layer] = not self.visibility[layer]
+    def toggle_layer_visibility(self, z):
+        layer = self.get_layer_by_z(z)
+        layer.isVisible = not layer.isVisible
 
     def toggle_mask_opacity(self):
         self.maskOpaque = not self.maskOpaque

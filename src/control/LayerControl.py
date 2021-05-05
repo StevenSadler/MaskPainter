@@ -41,17 +41,19 @@ class LayerControl:
                                command=lambda layer=0: self.model.add_layer(layer))
 
         layer_rows = []
-        for mask in range(self.model.project.numMasks):
-            name_button = Button(self.master, width='10', text=self.model.project.layerNames[mask],
-                                 command=lambda layer=mask: self._prompt_layer_name(layer))
-            color_button = Button(self.master, width='3', bg=self.model.project.layerColors[mask],
-                                  command=lambda layer=mask: self._prompt_layer_color_chooser(layer))
-            hex_button = Button(self.master, width='7', text=self.model.project.layerColors[mask],
-                                command=lambda layer=mask: self._prompt_layer_hex_color(layer))
+        for z in range(self.model.project.numMasks):
+            layer = self.model.project.get_layer_by_z(z)
+
+            name_button = Button(self.master, width='10', text=layer.name,
+                                 command=lambda i=z: self._prompt_layer_name(i))
+            color_button = Button(self.master, width='3', bg=layer.color,
+                                  command=lambda i=z: self._prompt_layer_color_chooser(i))
+            hex_button = Button(self.master, width='7', text=layer.color,
+                                command=lambda i=z: self._prompt_layer_hex_color(i))
             add_button = Button(self.master, width='2', text='+',
-                                command=lambda layer=mask+1: self.model.add_layer(layer))
+                                command=lambda i=z+1: self.model.add_layer(i))
             remove_button = Button(self.master, width='2', text='-',
-                                   command=lambda layer=mask: self.model.remove_layer(layer))
+                                   command=lambda i=z: self.model.remove_layer(i))
 
             if self.model.project.numMasks == 1:
                 remove_button.config(state=DISABLED)
@@ -63,8 +65,8 @@ class LayerControl:
         # and those at the bottom will be in the background
         # add_label_row(label)
         grid_row(label)
-        for i in range(self.model.project.numMasks - 1, -1, -1):
-            grid_row(*layer_rows[i])
+        for z in range(self.model.project.numMasks - 1, -1, -1):
+            grid_row(*layer_rows[z])
         grid_row_offset(3, *[bg_add_button])
 
     ################################

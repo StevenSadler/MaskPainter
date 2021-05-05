@@ -102,16 +102,17 @@ class CanvasPainter:
     ###########################################################################
 
     def _edit_active_mask(self, e, color):
-        active_mask = self.model.project.cvMasks[self.model.project.activeMask]
+        active_layer = self.model.project.activeLayer
         x, y = self.model.canvas.mouse_canvas_to_world(e)
 
-        if self._brush_position:
-            bx, by = self._brush_position
-            cv.line(active_mask, (bx, by), (x, y), color, self.model.brushSize * 2)
-        else:
-            self.model.save_undo_state()
+        if active_layer.isVisible:
+            if self._brush_position:
+                bx, by = self._brush_position
+                cv.line(active_layer.cvMask, (bx, by), (x, y), color, self.model.brushSize * 2)
+            else:
+                self.model.save_undo_state()
+            cv.circle(active_layer.cvMask, (x, y), self.model.brushSize, color, -1)
 
-        cv.circle(active_mask, (x, y), self.model.brushSize, color, -1)
         self.render_canvas_image()
         self.render_brush_outline(e.x, e.y)
         self._brush_position = (x, y)
@@ -135,8 +136,7 @@ class CanvasPainter:
         image.resize(ws_zoom_size)
         return image
 
-    def _get_mask(self, mask_num):
-        cv_mask = self.model.project.cvMasks[mask_num]
+    def _get_mask(self, cv_mask):
         zoom_img = cv_mask[
                    self.model.canvas.ms_zoom_top:self.model.canvas.ms_zoom_bottom,
                    self.model.canvas.ms_zoom_left:self.model.canvas.ms_zoom_right
@@ -149,13 +149,14 @@ class CanvasPainter:
     def _get_masked_image(self, mask_num, show_all=False):
         ws_zoom_size = self.model.canvas.ws_zoom_size()
         if mask_num < self.model.project.numMasks:
+            layer = self.model.project.get_layer_by_z(mask_num)
             if self.model.project.maskOpaque:
-                mask = Image.fromarray(self._get_mask(mask_num))
+                mask = Image.fromarray(self._get_mask(layer.cvMask))
             else:
-                mask = Image.fromarray(self._get_mask(mask_num) // 2)
+                mask = Image.fromarray(self._get_mask(layer.cvMask) // 2)
             mask.convert('L').resize(ws_zoom_size)
-            image = Image.new('RGBA', ws_zoom_size, self.model.project.layerColors[mask_num])
-            if self.model.project.visibility[mask_num] or show_all:
+            image = Image.new('RGBA', ws_zoom_size, layer.color)
+            if layer.isVisible or show_all:
                 image.putalpha(mask)
             else:
                 image.putalpha(0)

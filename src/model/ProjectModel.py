@@ -52,6 +52,10 @@ class ProjectModel:
         return "{}_mask{}.jpg".format(image_prefix, image_key)
 
     @staticmethod
+    def _generate_background_file_name(image_prefix):
+        return "{}_background.jpg".format(image_prefix)
+
+    @staticmethod
     def _write_default_config(config_file_path):
         dictionary = {
             "default_project_settings": {
@@ -59,27 +63,6 @@ class ProjectModel:
                 "mask_height": 360,
                 "layer_keys": [],
                 "layers": {},
-                # "layer_keys": ["11", "22", "33"],
-                # "layers": {
-                #     "11": {
-                #         "name": "Lowlands",
-                #         "color": "#ffffb3",
-                #         "visible": True,
-                #         "locked": False
-                #     },
-                #     "22": {
-                #         "name": "Hills",
-                #         "color": "#b3ff99",
-                #         "visible": True,
-                #         "locked": False
-                #     },
-                #     "33": {
-                #         "name": "Mountains",
-                #         "color": "#dfbf9f",
-                #         "visible": True,
-                #         "locked": False
-                #     },
-                # },
                 "active_mask": -1,
                 "mask_opaque": True
             }
@@ -126,10 +109,9 @@ class ProjectModel:
 
     def create_project(self, project_file_path, bg_image_file_path=None):
         self.unload()
-        if bg_image_file_path:
-            self.backgroundImagePath = bg_image_file_path
         self._set_paths(project_file_path)
-        self._read_default_config(self._config_file_path, self.projectName)
+        bg_img_size = self._copy_background_image(bg_image_file_path)  # need to know size before creating masks
+        self._read_default_config(self._config_file_path, self.projectName, bg_img_size)
         self._save_project_json()
         self._save_masks()
 
@@ -149,22 +131,18 @@ class ProjectModel:
         self.compRootDir = os.path.join(project_root_dir, self._comp_dir)
         self.maskRootDir = os.path.join(project_root_dir, self._mask_dir)
 
-    def _read_default_config(self, config_file_path, image_prefix):
+    def _read_default_config(self, config_file_path, image_prefix, bg_img_size):
         if not os.path.exists(config_file_path):
             self._write_default_config(config_file_path)
 
         obj = self._read_json_file(config_file_path)
         config = obj.default_project_settings
 
-        if self.backgroundImagePath:
-            # need to get h and w from background image
-            temp_bg = cv.imread(self.backgroundImagePath)
-            h = temp_bg.shape[0]
-            w = temp_bg.shape[1]
+        if bg_img_size:
+            w, h = bg_img_size
         else:
             h = config.mask_height
             w = config.mask_width
-
         self.imgSize = (w, h)
 
         # derive data from config
@@ -187,10 +165,14 @@ class ProjectModel:
     def _read_project_json(self, project_file_path):
         obj = self._read_json_file(project_file_path)
 
-        if hasattr(obj, "background_image_path"):
-            self.backgroundImagePath = obj.background_image_path
-            cv_bg = cv.imread(self.backgroundImagePath)
-            self.cvBackgroundImage = cv.cvtColor(cv_bg, cv.COLOR_BGR2RGBA)
+        # use a background image if it exists in the mask dir
+        if os.path.exists(self.maskRootDir):
+            bg_filename = self._generate_background_file_name(self.projectName)
+            bg_file_path = os.path.join(self.maskRootDir, bg_filename)
+            if os.path.exists(bg_file_path):
+                cv_bg = cv.imread(bg_file_path)
+                self.cvBackgroundImage = cv.cvtColor(cv_bg, cv.COLOR_BGR2RGBA)
+                self.backgroundImagePath = bg_file_path
 
         # derive data from project file
         self.activeMask = obj.active_mask
@@ -236,12 +218,25 @@ class ProjectModel:
             "active_mask": self.activeMask,
             "mask_opaque": self.maskOpaque
         }
-        if self.backgroundImagePath:
-            dictionary["background_image_path"] = self.backgroundImagePath
 
         with open(self.projectPath, 'w') as outfile:
             json.dump(dictionary, outfile, indent=4)
         outfile.close()
+
+    def _copy_background_image(self, bg_image_file_path):
+        # returns img_size (w, h) if bg_image exists, otherwise returns None
+        if bg_image_file_path:
+            if not os.path.exists(self.maskRootDir):
+                os.mkdir(self.maskRootDir)
+            cv_bg = cv.imread(bg_image_file_path)
+            bg_filename = self._generate_background_file_name(self.projectName)
+            self.backgroundImagePath = os.path.join(self.maskRootDir, bg_filename)
+            cv.imwrite(self.backgroundImagePath, cv_bg)
+
+            h = cv_bg.shape[0]
+            w = cv_bg.shape[1]
+            return w, h
+        return None
 
     def _save_masks(self):
         if not os.path.exists(self.maskRootDir):

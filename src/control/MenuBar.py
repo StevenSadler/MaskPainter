@@ -66,18 +66,22 @@ class MenuBar:
         menu.add_command(label="Undo", command=self._kb_undo, accelerator="Ctrl+Z", state=DISABLED)
         menu.add_command(label="Redo", command=self._kb_redo, accelerator="Ctrl+Y", state=DISABLED)
         menu.add_separator()
-        menu.add_command(label="Move Active to Top", command=self._kb_move_top, state=DISABLED)
-        menu.add_command(label="Move Active Up", command=self._kb_move_up, state=DISABLED)
-        menu.add_command(label="Move Active Down", command=self._kb_move_down, state=DISABLED)
-        menu.add_command(label="Move Active to Bottom", command=self._kb_move_bottom, state=DISABLED)
+        menu.add_command(label="Move Active to Top", command=self._kb_move_top, accelerator="Ctrl+Shift+Up")
+        menu.add_command(label="Move Active Up", command=self._kb_move_up, accelerator="Ctrl+Up")
+        menu.add_command(label="Move Active Down", command=self._kb_move_down, accelerator="Ctrl+Down")
+        menu.add_command(label="Move Active to Bottom", command=self._kb_move_bottom, accelerator="Ctrl+Shift+Down")
 
         self._add_toggle(self._disable_no_undo, menu, menu.index("Undo"), '<Control-z>', self._kb_undo)
         self._add_toggle(self._disable_no_redo, menu, menu.index("Redo"), '<Control-y>', self._kb_redo)
 
-        self._add_toggle(self._disable_is_top, menu, menu.index("Move Active to Top"))
-        self._add_toggle(self._disable_is_top, menu, menu.index("Move Active Up"))
-        self._add_toggle(self._disable_is_bottom, menu, menu.index("Move Active Down"))
-        self._add_toggle(self._disable_is_bottom, menu, menu.index("Move Active to Bottom"))
+        self._add_toggle(self._disable_is_top, menu, menu.index("Move Active to Top"),
+                         '<Control-Shift-Up>', self._kb_move_top)
+        self._add_toggle(self._disable_is_top, menu, menu.index("Move Active Up"),
+                         '<Control-Up>', self._kb_move_up)
+        self._add_toggle(self._disable_is_bottom, menu, menu.index("Move Active Down"),
+                         '<Control-Down>', self._kb_move_down)
+        self._add_toggle(self._disable_is_bottom, menu, menu.index("Move Active to Bottom"),
+                         '<Control-Shift-Down>', self._kb_move_bottom)
 
     def _init_debug_menu(self, menu):
         menu.add_command(label="Break App", command=self.app.breakpoint_app)
@@ -152,14 +156,14 @@ class MenuBar:
     def _kb_redo(self, _=None):
         self.model.redo()
 
-    def _kb_move_top(self):
+    def _kb_move_top(self, _=None):
         self.model.move_active(self.model.project.activeMask, self.model.project.numMasks - 1)
 
-    def _kb_move_bottom(self):
+    def _kb_move_bottom(self, _=None):
         self.model.move_active(self.model.project.activeMask, 0)
 
-    def _kb_move_up(self):
+    def _kb_move_up(self, _=None):
         self.model.move_active(self.model.project.activeMask, self.model.project.activeMask + 1)
 
-    def _kb_move_down(self):
+    def _kb_move_down(self, _=None):
         self.model.move_active(self.model.project.activeMask, self.model.project.activeMask - 1)

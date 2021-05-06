@@ -55,7 +55,7 @@ class LayerControl:
             remove_button = Button(self.master, width='2', text='-',
                                    command=lambda i=z: self.model.remove_layer(i))
 
-            if self.model.project.numMasks == 1:
+            if self.model.project.numMasks == 1 or layer.isLocked:
                 remove_button.config(state=DISABLED)
 
             layer_rows.append([name_button, color_button, hex_button, add_button, remove_button])

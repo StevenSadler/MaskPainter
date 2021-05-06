@@ -31,13 +31,22 @@ class CanvasPainter:
 
     def _update_layer(self):
         self._bg_comp = self._comp_bg_image()
-        self._fg_comp = self._comp_fg_image()
+        if self.model.project.maskOpaque:
+            self._fg_comp = self._comp_fg_image()
         self.render_canvas_image()
 
     def render_canvas_image(self):
         active_layer_image = self._get_masked_image(self.model.project.activeMask)
         composite = Image.alpha_composite(self._bg_comp, active_layer_image)
-        composite = Image.alpha_composite(composite, self._fg_comp)
+        if self.model.project.maskOpaque:
+            composite = Image.alpha_composite(composite, self._fg_comp)
+        else:
+            # if masks are transparent, all layers in front of the active layer need to be re-rendered
+            #   immediately after the active layer is re-rendered
+            #   and ignore the _fg_comp since that only works for opaque masks
+            for i in range(self.model.project.activeMask + 1, self.model.project.numMasks):
+                layer_image = self._get_masked_image(i)
+                composite = Image.alpha_composite(composite, layer_image)
 
         self.canvas.delete(ALL)
 

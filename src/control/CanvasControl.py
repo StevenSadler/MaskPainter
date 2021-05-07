@@ -9,6 +9,9 @@ class CanvasControl:
         self.model.subject.load.attach(self._update_load)
         self.painter = painter
 
+        self.panKey = "space"
+        self._isPan = False
+
     def _update_load(self):
         if self.model.isProjectLoaded:
             canvas_size = (self.canvas.winfo_width(), self.canvas.winfo_height())
@@ -19,15 +22,10 @@ class CanvasControl:
             self._unbind()
 
     def _bind(self):
-        # left mouse button to paint
-        self.canvas.bind('<Button-1>', self._start_paint)
-        self.canvas.bind('<B1-Motion>', self.painter.paint)
-        self.canvas.bind('<ButtonRelease-1>', self._end_brush_stroke)
-
-        # middle mouse button to pan
-        self.canvas.bind('<Button-2>', self._start_pan)
-        self.canvas.bind('<B2-Motion>', self.painter.pan)
-        self.canvas.bind('<ButtonRelease-2>', self._end_pan)
+        # left mouse button to paint/pan
+        self.canvas.bind('<Button-1>', self._start_b1)
+        self.canvas.bind('<B1-Motion>', self._move_b1)
+        self.canvas.bind('<ButtonRelease-1>', self._end_b1)
 
         # right mouse button to erase
         self.canvas.bind('<Button-3>', self._start_erase)
@@ -84,6 +82,13 @@ class CanvasControl:
             self.model.zoom(int(math.ceil(self.model.canvas.zoom / 2)))
             self.painter.zoom(e)
 
+    def _start_b1(self, e):
+        self._isPan = self.model.keyboard.is_pressed(self.panKey)
+        if self._isPan:
+            self._start_pan(e)
+        else:
+            self._start_paint(e)
+
     def _start_paint(self, e):
         if self.model.project.activeLayer.isVisible and not self.model.project.activeLayer.isLocked:
             self._unbind_zoom()
@@ -102,6 +107,19 @@ class CanvasControl:
         self._unbind_zoom()
         self.painter.pan(e)
 
+    def _move_b1(self, e):
+        if self._isPan:
+            self.painter.pan(e)
+        else:
+            self.painter.paint(e)
+
+    def _end_b1(self, e):
+        if self._isPan:
+            self._end_pan(e)
+        else:
+            self._end_brush_stroke(e)
+        self._isPan = False
+
     def _end_brush_stroke(self, e):
         self._bind_zoom()
         self.painter.end_brush_stroke(e)
@@ -112,7 +130,8 @@ class CanvasControl:
 
     def _mouse_move(self, e):
         self.painter.render_canvas_image()
-        self.painter.render_brush_outline(e.x, e.y)
+        if not self._isPan and not self.model.keyboard.is_pressed(self.panKey):
+            self.painter.render_brush_outline(e.x, e.y)
 
     def _mouse_exit(self, _):
         self.painter.render_canvas_image()

@@ -32,7 +32,7 @@ class TkPaintApp(Frame):
             self.control_panel_width = 226
 
         # model must be initialized before widgets and controllers
-        model = Model()
+        model = Model(master)
         model.subject.save.attach(self._update_save)
         model.subject.load.attach(self._update_load)
         model.subject.project.attach(self._update_project)

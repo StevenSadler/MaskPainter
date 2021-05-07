@@ -4,6 +4,7 @@ import copy
 from src.ObservableSubject import ObservableSubject
 from src.model.ProjectModel import ProjectModel
 from src.model.CanvasModel import CanvasModel
+from src.model.KeyboardModel import KeyboardModel
 from src.model.UndoHistory import UndoHistory
 
 
@@ -19,11 +20,12 @@ class Subject:
 
 
 class Model:
-    def __init__(self, is_reset=False):
-        if not is_reset:
+    def __init__(self, master=None):
+        if master:
             self.subject = Subject()
             self.project = ProjectModel()
             self.canvas = CanvasModel()
+            self.keyboard = KeyboardModel(master)
             self._history = UndoHistory(20)
 
         # save subject
@@ -42,7 +44,7 @@ class Model:
         self.brushSizeMax = 40
 
     def _reset(self):
-        self.__init__(True)
+        self.__init__()
 
     def has_undo(self):
         return self.isProjectLoaded and self._history.has_undo()

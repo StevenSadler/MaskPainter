@@ -56,11 +56,17 @@ class ProjectModel:
         return "{}_background.jpg".format(image_prefix)
 
     @staticmethod
+    def _generate_large_background_file_name(image_prefix):
+        return "{}_large_background.jpg".format(image_prefix)
+
+    @staticmethod
     def _write_default_config(config_file_path):
         dictionary = {
             "default_project_settings": {
                 "mask_width": 640,
                 "mask_height": 360,
+                "max_background_width": 1600,
+                "max_background_height": 900,
                 "layer_keys": [],
                 "layers": {},
                 "active_mask": -1,
@@ -110,8 +116,11 @@ class ProjectModel:
     def create_project(self, project_file_path, bg_image_file_path=None):
         self.unload()
         self._set_paths(project_file_path)
-        bg_img_size = self._copy_background_image(bg_image_file_path)  # need to know size before creating masks
-        self._read_default_config(self._config_file_path, self.projectName, bg_img_size)
+
+        config = self._read_default_config(self._config_file_path)
+        bg_img_size = self._copy_background_image(config, bg_image_file_path)
+        self._process_config(config, bg_img_size)
+
         self._save_project_json()
         self._save_masks()
 
@@ -131,13 +140,43 @@ class ProjectModel:
         self.compRootDir = os.path.join(project_root_dir, self._comp_dir)
         self.maskRootDir = os.path.join(project_root_dir, self._mask_dir)
 
-    def _read_default_config(self, config_file_path, image_prefix, bg_img_size):
+    def _read_default_config(self, config_file_path):
         if not os.path.exists(config_file_path):
             self._write_default_config(config_file_path)
 
         obj = self._read_json_file(config_file_path)
-        config = obj.default_project_settings
+        return obj.default_project_settings
 
+    def _copy_background_image(self, config, bg_image_file_path):
+        # returns img_size (w, h) if bg_image exists, otherwise returns None
+        if bg_image_file_path:
+            if not os.path.exists(self.maskRootDir):
+                os.mkdir(self.maskRootDir)
+            cv_bg = cv.imread(bg_image_file_path)
+            h = cv_bg.shape[0]
+            w = cv_bg.shape[1]
+
+            # downscale the image if it is more than config's max bg size
+            h_over = h / config.max_background_height
+            w_over = w / config.max_background_width
+            over = max(h_over, w_over)
+            if over > 1.0:
+                large_bg_filename = self._generate_large_background_file_name(self.projectName)
+                large_bg_path = os.path.join(self.maskRootDir, large_bg_filename)
+                cv.imwrite(large_bg_path, cv_bg)
+
+                h = int(h / over)
+                w = int(w / over)
+                cv_bg = cv.resize(cv_bg, (w, h))
+
+            bg_filename = self._generate_background_file_name(self.projectName)
+            self.backgroundImagePath = os.path.join(self.maskRootDir, bg_filename)
+            cv.imwrite(self.backgroundImagePath, cv_bg)
+
+            return w, h
+        return None
+
+    def _process_config(self, config, bg_img_size):
         if bg_img_size:
             w, h = bg_img_size
         else:
@@ -222,21 +261,6 @@ class ProjectModel:
         with open(self.projectPath, 'w') as outfile:
             json.dump(dictionary, outfile, indent=4)
         outfile.close()
-
-    def _copy_background_image(self, bg_image_file_path):
-        # returns img_size (w, h) if bg_image exists, otherwise returns None
-        if bg_image_file_path:
-            if not os.path.exists(self.maskRootDir):
-                os.mkdir(self.maskRootDir)
-            cv_bg = cv.imread(bg_image_file_path)
-            bg_filename = self._generate_background_file_name(self.projectName)
-            self.backgroundImagePath = os.path.join(self.maskRootDir, bg_filename)
-            cv.imwrite(self.backgroundImagePath, cv_bg)
-
-            h = cv_bg.shape[0]
-            w = cv_bg.shape[1]
-            return w, h
-        return None
 
     def _save_masks(self):
         if not os.path.exists(self.maskRootDir):

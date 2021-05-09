@@ -125,17 +125,35 @@ class CanvasModel:
         self._clamp_camera()
         self._derive_space_vars()
 
-    def set_camera_position(self, world_space_x, world_space_y):
-        old_x = self.ws_camera_x
-        old_y = self.ws_camera_y
-        self.ws_camera_x = world_space_x
-        self.ws_camera_y = world_space_y
-        self._clamp_camera()
-        if self.ws_camera_x != old_x or self.ws_camera_y != old_y:
-            self._derive_space_vars()
+    def set_mouse_zoom(self, zoom, e):
+        x, y = self.mouse_canvas_to_world(e)
+
+        # move camera position with no clamping and no deriving space vars
+        dx = x - self.ws_camera_x
+        dy = y - self.ws_camera_y
+        self.ws_camera_x += dx
+        self.ws_camera_y += dy
+
+        # zoom with no clamping and no deriving space vars
+        old_zoom = self.zoom
+        self.zoom = Utils.clamp(zoom, self.min_zoom, self.max_zoom)
+
+        # manually derive world and camera, since old camera position should only be scaled during zoom
+        delta_zoom = 1.0 * self.zoom / old_zoom
+        self.world_w = self.mask_w * self.zoom
+        self.world_h = self.mask_h * self.zoom
+        self.ws_camera_x = int(math.floor(self.ws_camera_x * delta_zoom))
+        self.ws_camera_y = int(math.floor(self.ws_camera_y * delta_zoom))
+
+        # move the world so the new camera moves to the mouse
+        # clamp and derive space vars
+        self.move_camera_position(-dx, -dy)
 
     def move_camera_position(self, dx, dy):
-        self.set_camera_position(self.ws_camera_x + dx, self.ws_camera_y + dy)
+        self.ws_camera_x += dx
+        self.ws_camera_y += dy
+        self._clamp_camera()
+        self._derive_space_vars()
 
     def resize_canvas(self, canvas_size):
         self.canvas_w, self.canvas_h = canvas_size
@@ -149,9 +167,13 @@ class CanvasModel:
         # need positive offset if canvas is smaller than world
         x_offset = max(0, self.ws_canvas_x)
         y_offset = max(0, self.ws_canvas_y)
-        x = (e.x - self.cs_crop_x + x_offset) // self.zoom
-        y = (e.y - self.cs_crop_y + y_offset) // self.zoom
+        x = (e.x - self.cs_crop_x + x_offset)
+        y = (e.y - self.cs_crop_y + y_offset)
         return x, y
+
+    def mouse_canvas_to_mask(self, e):
+        x, y = self.mouse_canvas_to_world(e)
+        return x // self.zoom, y // self.zoom
 
     ###########################################################################
     #

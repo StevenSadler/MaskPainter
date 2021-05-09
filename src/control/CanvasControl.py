@@ -75,11 +75,11 @@ class CanvasControl:
     def _zoom(self, e):
         if e.delta > 0 and self.model.canvas.zoom < self.model.canvas.max_zoom:
             # zoom in
-            self.model.zoom(self.model.canvas.zoom * 2)
+            self.model.mouse_zoom(self.model.canvas.zoom * 2, e)
             self.painter.zoom(e)
         elif e.delta < 0 and self.model.canvas.zoom > self.model.canvas.min_zoom:
             # zoom out
-            self.model.zoom(int(math.ceil(self.model.canvas.zoom / 2)))
+            self.model.mouse_zoom(int(math.ceil(self.model.canvas.zoom / 2)), e)
             self.painter.zoom(e)
 
     def _start_b1(self, e):

@@ -56,9 +56,19 @@ class CanvasPainter:
         self.canvas.create_image(self.model.canvas.cs_crop_x, self.model.canvas.cs_crop_y,
                                  image=self.canvas.image, anchor=NW)
 
+        # for debugging
+        # self.render_camera_outline()
+
     def render_brush_outline(self, x, y):
         r = self.model.brushSize * self.model.canvas.zoom
         self.canvas.create_oval(x - r, y - r, x + r, y + r)
+
+    def render_camera_outline(self):
+        # for debugging zoom, render camera center
+        x = self.model.canvas.canvas_w // 2
+        y = self.model.canvas.canvas_h // 2
+        r = self.model.brushSize * self.model.canvas.zoom
+        self.canvas.create_rectangle(x - r, y - r, x + r, y + r)
 
     def export_comp_image(self):
         old_zoom = self.model.canvas.zoom
@@ -113,6 +123,8 @@ class CanvasPainter:
     def _edit_active_mask(self, e, color):
         active_layer = self.model.project.activeLayer
         x, y = self.model.canvas.mouse_canvas_to_world(e)
+        x = x // self.model.canvas.zoom
+        y = y // self.model.canvas.zoom
 
         if active_layer.isVisible and not active_layer.isLocked:
             if self._brush_position:

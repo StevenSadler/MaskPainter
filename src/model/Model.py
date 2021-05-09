@@ -112,6 +112,10 @@ class Model:
         self.canvas.set_zoom(zoom_factor)
         self.subject.zoom.notify()
 
+    def mouse_zoom(self, zoom_factor, e):
+        self.canvas.set_mouse_zoom(zoom_factor, e)
+        self.subject.zoom.notify()
+
     def save_undo_state(self):
         project = copy.deepcopy(self.project)
         self._history.save_state(project)
